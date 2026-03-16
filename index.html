@@ -456,10 +456,16 @@
                         
                         consultantStats[c].total += count;
 
-                        if (count === maxDailyAppts && count > 6) consultantStats[c].crown++;
-                        if (count >= 6) consultantStats[c].excellent++;
-                        else if (count >= 4) consultantStats[c].standard++;
-                        else consultantStats[c].insufficient++;
+                        // 修復：改為 if...else if 互斥判斷，當天只會獲得一種結果
+                        if (count === maxDailyAppts && count > 6) {
+                            consultantStats[c].crown++;
+                        } else if (count >= 6) {
+                            consultantStats[c].excellent++;
+                        } else if (count >= 4) {
+                            consultantStats[c].standard++;
+                        } else {
+                            consultantStats[c].insufficient++;
+                        }
                     });
                 });
             });
@@ -477,16 +483,15 @@
             statsArray.forEach(stat => {
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-xl p-3 border border-morandi-border/60 flex flex-col gap-1.5 shadow-sm transition-transform hover:-translate-y-1';
+                // 優化排版：將姓名與標籤改為上下排列，並加上 break-all 防止長姓名被壓縮或截斷
                 card.innerHTML = `
-                    <div class="font-bold text-morandi-text text-base border-b border-morandi-border/60 pb-1.5 mb-1 flex items-center justify-between" title="${stat.name}">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <div class="text-morandi-primary shrink-0">
-                                <i data-lucide="user-check" class="w-4 h-4"></i>
-                            </div>
-                            <span class="truncate">${stat.name}</span>
+                    <div class="border-b border-morandi-border/60 pb-2 mb-1.5 flex flex-col gap-1.5">
+                        <div class="font-bold text-morandi-text text-base flex items-start gap-1.5 break-all leading-snug">
+                            <i data-lucide="user-check" class="w-4 h-4 text-morandi-primary shrink-0 mt-0.5"></i>
+                            <span>${stat.name}</span>
                         </div>
-                        <div class="bg-morandi-primary text-white text-xs px-2 py-0.5 rounded shadow-sm font-bold shrink-0 ml-1">
-                            共 ${stat.total}
+                        <div class="bg-morandi-primary text-white text-xs px-2 py-1 rounded shadow-sm font-bold w-fit">
+                            總預約：${stat.total} 位
                         </div>
                     </div>
                     <div class="flex justify-between items-center text-xs">
@@ -595,9 +600,17 @@
                         const customers = dayData.consultants[consultantName];
                         const count = customers.length;
                         
+                        let isCrown = (count === maxDailyAppts && count > 6);
                         let iconHtml = '';
                         let statusText = '';
-                        if (count >= 6) {
+                        let crownHtml = '';
+                        
+                        // 優化：單日明細的圖示也改為互斥，不讓冠軍與優良同時出現
+                        if (isCrown) {
+                            crownHtml = `<i data-lucide="crown" class="w-5 h-5 text-yellow-500 fill-yellow-400" title="單日最高預約"></i>`;
+                            iconHtml = `<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i>`;
+                            statusText = '單日冠軍';
+                        } else if (count >= 6) {
                             iconHtml = `<i data-lucide="flame" class="w-4 h-4 text-red-500"></i>`;
                             statusText = '表現優良';
                         } else if (count >= 4) {
@@ -606,11 +619,6 @@
                         } else {
                             iconHtml = `<i data-lucide="alert-circle" class="w-4 h-4 text-orange-400"></i>`;
                             statusText = '預約不足';
-                        }
-
-                        let crownHtml = '';
-                        if (count === maxDailyAppts && count > 6) {
-                            crownHtml = `<i data-lucide="crown" class="w-5 h-5 text-yellow-500 fill-yellow-400" title="單日最高預約"></i>`;
                         }
                         
                         const consultantBlock = document.createElement('div');

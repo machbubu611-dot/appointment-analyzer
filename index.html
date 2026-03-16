@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>諮詢師預約分析系統</title>
+    <!-- 引入 Tailwind CSS 進行樣式排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS 用於解析 Excel 檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- 引入 html2canvas 用於整頁截圖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- 引入 Lucide 圖標庫 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 設定專屬的莫蘭迪紅粉色系 (Morandi Pink/Red) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        morandi: {
+                            bg: '#F4EFEF',        /* 背景色：極淺灰粉 */
+                            card: '#FFFFFF',      /* 卡片背景：純白 */
+                            text: '#584B4C',      /* 主要文字：深灰褐 */
+                            light: '#8B7C7D',     /* 次要文字：淺灰褐 */
+                            primary: '#A77D7F',   /* 主色調：莫蘭迪粉/豆沙紅 */
+                            primaryHover: '#916A6C', /* 主色調懸停 */
+                            border: '#DCCBCC',    /* 邊框色：淺灰粉 */
+                            btn: '#EFE8E8',       /* 按鈕色：柔和灰粉 */
+                            btnHover: '#DFCDCF',  /* 按鈕懸停色 */
+                            badge: '#C39B9D'      /* 標籤色 */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 滿足整體字體放大 2pt 的需求 (預設16px，提升至18px) */
+        html {
+            font-size: 18px; 
+        }
+        /* 自訂捲軸樣式，配合莫蘭迪色系 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F4EFEF;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #DCCBCC;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A77D7F;
+        }
+        body {
+            background-color: #F4EFEF;
+            color: #584B4C;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased p-4 md:p-8">
+
+    <!-- 頂部標題與操作區塊 (展開為滿版設計 max-w-[1600px]) -->
+    <div class="w-full max-w-[1600px] mx-auto mb-6 bg-morandi-card rounded-2xl shadow-sm border border-morandi-border p-6 relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-morandi-primary flex items-center gap-2">
+                    <i data-lucide="calendar-heart" class="w-8 h-8"></i>
+                    諮詢師預約分析系統
+                </h1>
+                <p class="text-morandi-light mt-2 text-sm md:text-base">
+                    請上傳預約明細表 (Excel格式)。系統會以每週為單位統計，並過濾已取消的預約。
+                </p>
+            </div>
+            
+            <!-- 右上角按鈕區 -->
+            <div class="w-full md:w-auto flex flex-wrap gap-3 justify-end">
+                <!-- 截圖按鈕 -->
+                <button id="screenshotBtn" class="bg-white border-2 border-morandi-primary text-morandi-primary hover:bg-morandi-primary/10 px-5 py-2.5 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 font-bold">
+                    <i data-lucide="camera" class="w-5 h-5"></i>
+                    截圖保存
+                </button>
+
+                <!-- 檔案上傳按鈕 -->
+                <label for="fileInput" class="cursor-pointer bg-morandi-primary hover:bg-morandi-primaryHover text-white px-5 py-2.5 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 font-bold">
+                    <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                    匯入 Excel 檔案
+                </label>
+                <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" />
+            </div>
+        </div>
+
+        <!-- 總數統計與圖例說明區 (上傳後才會顯示) -->
+        <div id="summaryStats" class="mt-6 pt-5 border-t border-morandi-border flex flex-wrap gap-4 items-center hidden">
+            <!-- 總預約數標籤 -->
+            <div class="bg-morandi-primary text-white px-5 py-2 rounded-xl text-lg font-bold flex items-center gap-2 shadow-sm">
+                <i data-lucide="bar-chart-big" class="w-6 h-6"></i>
+                檔案總預約數：<span id="totalApptDisplay" class="text-2xl">0</span> 位
+            </div>
+            
+            <!-- 顏色與圖示說明 -->
+            <div class="flex flex-wrap items-center gap-4 text-sm text-morandi-text bg-morandi-bg px-4 py-2 rounded-xl border border-morandi-border/50">
+                <div class="flex items-center gap-1.5 font-bold text-morandi-primary">
+                    <span class="w-4 h-4 rounded-md bg-morandi-primary border border-morandi-primary block shadow-sm"></span> 
+                    含預約醫師
+                </div>
+                <div class="w-px h-5 bg-morandi-border hidden sm:block"></div>
+                <div class="flex items-center gap-1 font-medium">
+                    <i data-lucide="crown" class="w-4 h-4 text-yellow-500 fill-yellow-400"></i> 單日冠軍(>6位)
+                </div>
+                <div class="w-px h-5 bg-morandi-border hidden sm:block"></div>
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-1"><i data-lucide="flame" class="w-4 h-4 text-red-500"></i>優良(≥6)</span>
+                    <span class="flex items-center gap-1"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>達標(4-5)</span>
+                    <span class="flex items-center gap-1"><i data-lucide="alert-circle" class="w-4 h-4 text-orange-400"></i>不足(<4)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 諮詢師表現總覽 (密集網格排版，適合電腦畫面) -->
+        <div id="consultantSummary" class="mt-5 pt-5 border-t border-morandi-border hidden">
+            <h3 class="text-lg md:text-xl font-bold text-morandi-text mb-3 flex items-center gap-2">
+                <i data-lucide="award" class="w-5 h-5 text-morandi-primary"></i>
+                所有諮詢人員表現總覽
+            </h3>
+            <!-- 改為高密度 grid，超寬螢幕可排 8 列 -->
+            <div id="consultantStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                <!-- 內容由 JS 產生 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析結果呈現區 (改為全寬 max-w-[1600px]) -->
+    <div id="resultsContainer" class="w-full max-w-[1600px] mx-auto space-y-6">
+        <!-- 初始提示區塊 -->
+        <div id="emptyState" class="text-center py-24 text-morandi-light border-2 border-dashed border-morandi-border rounded-2xl bg-morandi-card">
+            <i data-lucide="monitor" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
+            <p class="text-xl font-bold text-morandi-primary mb-2">歡迎使用桌面版分析系統</p>
+            <p class="text-lg">請先上傳 Excel 檔案，系統將以智慧多欄位並排顯示，大幅提升檢視效率</p>
+        </div>
+    </div>
+
+    <!-- 快速回到頂部按鈕 -->
+    <button id="scrollTopBtn" onclick="scrollToTop()" class="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-morandi-primary hover:bg-morandi-primaryHover text-white p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 opacity-0 translate-y-10 z-40 hidden" title="回到最上方">
+        <i data-lucide="arrow-up" class="w-6 h-6"></i>
+    </button>
+
+    <!-- 顧客詳細資訊 彈出視窗 (Modal) -->
+    <div id="customerModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-morandi-card w-full max-w-2xl rounded-2xl shadow-xl border border-morandi-border transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal 標題 -->
+            <div class="bg-morandi-primary px-6 py-4 flex justify-between items-center">
+                <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                    顧客預約詳細資訊
+                </h3>
+                <button onclick="closeModal()" class="text-white/80 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Modal 內容區 -->
+            <div class="p-6 overflow-y-auto custom-scrollbar">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">客戶編號</span>
+                        <span id="modal-A" class="font-semibold text-morandi-text text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">客戶電話</span>
+                        <span id="modal-B" class="font-semibold text-morandi-text text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">客戶姓名</span>
+                        <span id="modal-C" class="font-semibold text-morandi-primary text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">預約狀況</span>
+                        <span id="modal-G" class="font-semibold text-morandi-text text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">預約時間</span>
+                        <span id="modal-J" class="font-semibold text-morandi-text text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">預約醫師</span>
+                        <span id="modal-N" class="font-semibold text-morandi-primary text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
+                        <span class="block text-xs text-morandi-light mb-1">協助人員</span>
+                        <span id="modal-M" class="font-semibold text-morandi-text text-base"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50 md:col-span-2">
+                        <span class="block text-xs text-morandi-light mb-1">預約療程</span>
+                        <span id="modal-O" class="font-semibold text-morandi-text text-base whitespace-pre-wrap"></span>
+                    </div>
+                    <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50 md:col-span-2">
+                        <span class="block text-xs text-morandi-light mb-1">備註</span>
+                        <span id="modal-P" class="font-semibold text-morandi-text text-base whitespace-pre-wrap min-h-[3rem] block"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal 底部 -->
+            <div class="bg-morandi-bg px-6 py-4 border-t border-morandi-border flex justify-end">
+                <button onclick="closeModal()" class="bg-morandi-primary hover:bg-morandi-primaryHover text-white px-6 py-2 rounded-lg shadow-sm transition-colors font-medium">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let globalRawData = [];
+
+        window.addEventListener('scroll', () => {
+            const btn = document.getElementById('scrollTopBtn');
+            if (window.scrollY > 300) {
+                btn.classList.remove('hidden', 'opacity-0', 'translate-y-10');
+            } else {
+                btn.classList.add('opacity-0', 'translate-y-10');
+                setTimeout(() => {
+                    if (window.scrollY <= 300) btn.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 綁定截圖按鈕功能
+        document.getElementById('screenshotBtn').addEventListener('click', function() {
+            const btn = this;
+            const originalHtml = btn.innerHTML;
+            
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> 處理中...';
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            lucide.createIcons();
+
+            const scrollTopBtn = document.getElementById('scrollTopBtn');
+            if (scrollTopBtn) scrollTopBtn.style.display = 'none';
+
+            setTimeout(() => {
+                html2canvas(document.body, {
+                    scale: 2, 
+                    backgroundColor: '#F4EFEF', 
+                    useCORS: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    const now = new Date();
+                    const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+                    
+                    link.download = `預約分析報告_${timeStr}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    lucide.createIcons();
+                    if (scrollTopBtn) scrollTopBtn.style.display = '';
+                }).catch(err => {
+                    console.error('截圖失敗:', err);
+                    alert('截圖過程發生錯誤，請稍後再試。');
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    lucide.createIcons();
+                    if (scrollTopBtn) scrollTopBtn.style.display = '';
+                });
+            }, 300);
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
+                    processData(jsonData);
+                } catch (error) {
+                    alert('讀取檔案失敗，請確認是否為有效的 Excel 檔案：' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function getWeekInfo(dateString) {
+            const d = new Date(dateString);
+            if (isNaN(d)) return null;
+
+            const day = d.getDay(); 
+            const diffToMonday = day === 0 ? -6 : -(day - 1);
+
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diffToMonday);
+
+            const format = (dateObj) => {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dd}`;
+            };
+
+            return {
+                mondayStr: format(monday)
+            };
+        }
+
+        function processData(data) {
+            globalRawData = data;
+            const weeklyData = {}; 
+            let totalMonthlyCount = 0; 
+
+            data.forEach((row, index) => {
+                const getCol = (name) => {
+                    const key = Object.keys(row).find(k => k.trim() === name);
+                    return key ? (row[key] || '').trim() : '';
+                };
+
+                const date = getCol('預約日期');
+                const consultant = getCol('預約諮詢師');
+                const status = getCol('預約狀況');
+                const doctor = getCol('預約醫師');
+
+                if (!date || !consultant || status.includes('取消')) return;
+
+                totalMonthlyCount++;
+
+                const weekInfo = getWeekInfo(date);
+                if (!weekInfo) return;
+                
+                const weekKey = weekInfo.mondayStr;
+
+                if (!weeklyData[weekKey]) {
+                    weeklyData[weekKey] = {
+                        mondayStr: weekInfo.mondayStr,
+                        totalAppointments: 0,
+                        days: {},
+                        minDate: date, 
+                        maxDate: date  
+                    };
+                }
+
+                if (date < weeklyData[weekKey].minDate) weeklyData[weekKey].minDate = date;
+                if (date > weeklyData[weekKey].maxDate) weeklyData[weekKey].maxDate = date;
+
+                if (!weeklyData[weekKey].days[date]) {
+                    weeklyData[weekKey].days[date] = {
+                        totalAppointments: 0,
+                        consultants: {}
+                    };
+                }
+
+                if (!weeklyData[weekKey].days[date].consultants[consultant]) {
+                    weeklyData[weekKey].days[date].consultants[consultant] = [];
+                }
+
+                weeklyData[weekKey].days[date].consultants[consultant].push({
+                    name: getCol('客戶姓名') || '未填寫姓名',
+                    originalIndex: index,
+                    hasDoctor: doctor.length > 0 
+                });
+                
+                weeklyData[weekKey].totalAppointments++;
+                weeklyData[weekKey].days[date].totalAppointments++;
+            });
+
+            document.getElementById('totalApptDisplay').textContent = totalMonthlyCount;
+            document.getElementById('summaryStats').classList.remove('hidden');
+
+            renderData(weeklyData);
+        }
+
+        function toggleWeek(weekId, forceOpen = false) {
+            const content = document.getElementById(`content-${weekId}`);
+            const icon = document.getElementById(`icon-${weekId}`);
+            if (!content || !icon) return;
+
+            const isHidden = content.classList.contains('hidden');
+
+            if (isHidden || forceOpen) {
+                content.classList.remove('hidden');
+                icon.classList.remove('-rotate-90');
+            } else if (!forceOpen) {
+                content.classList.add('hidden');
+                icon.classList.add('-rotate-90');
+            }
+        }
+
+        function toggleDay(dateId, forceOpen = false) {
+            const content = document.getElementById(`day-content-${dateId}`);
+            const icon = document.getElementById(`day-icon-${dateId}`);
+            if (!content || !icon) return;
+
+            const isHidden = content.classList.contains('hidden');
+
+            if (isHidden || forceOpen) {
+                content.classList.remove('hidden');
+                icon.classList.remove('-rotate-90');
+            } else if (!forceOpen) {
+                content.classList.add('hidden');
+                icon.classList.add('-rotate-90');
+            }
+        }
+
+        function renderData(weeklyData) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = ''; 
+
+            const sortedWeeks = Object.keys(weeklyData).sort((a, b) => new Date(weeklyData[a].mondayStr) - new Date(weeklyData[b].mondayStr));
+
+            if (sortedWeeks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20 text-morandi-primary border-2 border-dashed border-morandi-primary/50 rounded-2xl bg-morandi-card">
+                        <p class="text-xl font-bold">沒有符合條件的資料</p>
+                        <p class="text-morandi-light mt-2">可能是檔案格式不符，或是該區間的所有預約皆已取消。</p>
+                    </div>`;
+                return;
+            }
+
+            // --- 統計諮詢師總覽 ---
+            const consultantStats = {};
+            
+            sortedWeeks.forEach(weekKey => {
+                const weekObj = weeklyData[weekKey];
+                const sortedDates = Object.keys(weekObj.days);
+                
+                sortedDates.forEach(date => {
+                    const dayData = weekObj.days[date];
+                    const consultants = Object.keys(dayData.consultants);
+                    
+                    let maxDailyAppts = 0;
+                    consultants.forEach(c => {
+                        const count = dayData.consultants[c].length;
+                        if (count > maxDailyAppts) {
+                            maxDailyAppts = count;
+                        }
+                    });
+
+                    consultants.forEach(c => {
+                        const count = dayData.consultants[c].length;
+                        if (!consultantStats[c]) {
+                            consultantStats[c] = { name: c, total: 0, crown: 0, excellent: 0, standard: 0, insufficient: 0 };
+                        }
+                        
+                        consultantStats[c].total += count;
+
+                        if (count === maxDailyAppts && count > 6) consultantStats[c].crown++;
+                        if (count >= 6) consultantStats[c].excellent++;
+                        else if (count >= 4) consultantStats[c].standard++;
+                        else consultantStats[c].insufficient++;
+                    });
+                });
+            });
+
+            const statsArray = Object.values(consultantStats).sort((a, b) => {
+                if (b.total !== a.total) return b.total - a.total; 
+                if (b.crown !== a.crown) return b.crown - a.crown; 
+                if (b.excellent !== a.excellent) return b.excellent - a.excellent;
+                if (b.standard !== a.standard) return b.standard - a.standard;
+                return a.name.localeCompare(b.name);
+            });
+
+            const statsGrid = document.getElementById('consultantStatsGrid');
+            statsGrid.innerHTML = '';
+            statsArray.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-3 border border-morandi-border/60 flex flex-col gap-1.5 shadow-sm transition-transform hover:-translate-y-1';
+                card.innerHTML = `
+                    <div class="font-bold text-morandi-text text-base border-b border-morandi-border/60 pb-1.5 mb-1 flex items-center justify-between" title="${stat.name}">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <div class="text-morandi-primary shrink-0">
+                                <i data-lucide="user-check" class="w-4 h-4"></i>
+                            </div>
+                            <span class="truncate">${stat.name}</span>
+                        </div>
+                        <div class="bg-morandi-primary text-white text-xs px-2 py-0.5 rounded shadow-sm font-bold shrink-0 ml-1">
+                            共 ${stat.total}
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="flex items-center gap-1"><i data-lucide="crown" class="w-3 h-3 text-yellow-500 fill-yellow-400"></i> 冠軍</span>
+                        <span class="font-bold text-morandi-text text-sm">${stat.crown} <span class="text-[10px] font-normal text-morandi-light">次</span></span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="flex items-center gap-1"><i data-lucide="flame" class="w-3 h-3 text-red-500"></i> 優良 (≥6)</span>
+                        <span class="font-bold text-morandi-text text-sm">${stat.excellent} <span class="text-[10px] font-normal text-morandi-light">次</span></span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-600"></i> 達標 (4-5)</span>
+                        <span class="font-bold text-morandi-text text-sm">${stat.standard} <span class="text-[10px] font-normal text-morandi-light">次</span></span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3 text-orange-400"></i> 不足 (<4)</span>
+                        <span class="font-bold text-morandi-text text-sm">${stat.insufficient} <span class="text-[10px] font-normal text-morandi-light">次</span></span>
+                    </div>
+                `;
+                statsGrid.appendChild(card);
+            });
+            document.getElementById('consultantSummary').classList.remove('hidden');
+
+            sortedWeeks.forEach(weekKey => {
+                const weekObj = weeklyData[weekKey];
+                const weekId = `week-${weekObj.mondayStr}`; 
+                
+                const weekLabelStr = weekObj.minDate === weekObj.maxDate ? 
+                                     weekObj.minDate : 
+                                     `${weekObj.minDate} ~ ${weekObj.maxDate}`;
+                
+                const weekCard = document.createElement('div');
+                weekCard.className = 'bg-morandi-card border border-morandi-border rounded-2xl shadow-sm overflow-hidden mb-6';
+                weekCard.id = weekId;
+                
+                const weekHeader = document.createElement('div');
+                weekHeader.className = 'bg-morandi-bg/80 hover:bg-morandi-border/40 cursor-pointer px-6 py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 transition-colors';
+                weekHeader.onclick = () => toggleWeek(weekId);
+                
+                weekHeader.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="chevron-down" id="icon-${weekId}" class="w-6 h-6 text-morandi-primary transition-transform duration-300 transform -rotate-90"></i>
+                        <h2 class="text-xl md:text-2xl font-bold text-morandi-text">
+                            ${weekLabelStr} <span class="text-base text-morandi-light font-normal ml-2">當區間明細</span>
+                        </h2>
+                    </div>
+                    <div class="bg-morandi-primary text-white px-4 py-1.5 rounded-full text-sm md:text-base font-bold flex items-center justify-center gap-1 shadow-sm w-fit">
+                        <i data-lucide="calendar-check-2" class="w-4 h-4"></i>
+                        本區間總預約：${weekObj.totalAppointments} 位
+                    </div>
+                `;
+                weekCard.appendChild(weekHeader);
+
+                const weekContentContainer = document.createElement('div');
+                weekContentContainer.id = `content-${weekId}`;
+                weekContentContainer.className = 'hidden grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 p-5 bg-morandi-bg/30 border-t border-morandi-border items-start';
+
+                const sortedDates = Object.keys(weekObj.days).sort((a, b) => new Date(a) - new Date(b));
+
+                sortedDates.forEach(date => {
+                    const dayData = weekObj.days[date];
+                    
+                    const dateBlock = document.createElement('div');
+                    dateBlock.id = `date-${date}`; 
+                    dateBlock.className = 'bg-white border border-morandi-border/60 rounded-xl overflow-hidden shadow-sm flex flex-col h-full transition-shadow hover:shadow-md';
+                    
+                    const dateObj = new Date(date);
+                    const daysOfWeek = ['日', '一', '二', '三', '四', '五', '六'];
+                    const dayString = !isNaN(dateObj) ? `(星期${daysOfWeek[dateObj.getDay()]})` : '';
+
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'bg-morandi-bg/60 hover:bg-morandi-bg cursor-pointer px-4 py-3 flex justify-between items-center border-b border-morandi-border/60 transition-colors shrink-0';
+                    dateHeader.onclick = () => toggleDay(date);
+                    dateHeader.innerHTML = `
+                        <h3 class="text-lg font-bold text-morandi-text flex items-center gap-2">
+                            <i data-lucide="chevron-down" id="day-icon-${date}" class="w-5 h-5 text-morandi-primary transition-transform duration-300"></i>
+                            ${date} <span class="text-sm text-morandi-light font-normal">${dayString}</span>
+                        </h3>
+                        <span class="text-morandi-primary font-bold text-sm bg-white px-2.5 py-1 rounded-full border border-morandi-border shadow-sm">
+                            單日：${dayData.totalAppointments} 位
+                        </span>
+                    `;
+                    dateBlock.appendChild(dateHeader);
+
+                    const dateBody = document.createElement('div');
+                    dateBody.id = `day-content-${date}`;
+                    dateBody.className = 'p-4 space-y-4 flex-1';
+
+                    const sortedConsultants = Object.keys(dayData.consultants).sort((a, b) => {
+                        const countA = dayData.consultants[a].length;
+                        const countB = dayData.consultants[b].length;
+                        if (countB !== countA) return countB - countA; 
+                        return a.localeCompare(b); 
+                    });
+                    
+                    let maxDailyAppts = 0;
+                    if (sortedConsultants.length > 0) {
+                        maxDailyAppts = dayData.consultants[sortedConsultants[0]].length;
+                    }
+
+                    sortedConsultants.forEach(consultantName => {
+                        const customers = dayData.consultants[consultantName];
+                        const count = customers.length;
+                        
+                        let iconHtml = '';
+                        let statusText = '';
+                        if (count >= 6) {
+                            iconHtml = `<i data-lucide="flame" class="w-4 h-4 text-red-500"></i>`;
+                            statusText = '表現優良';
+                        } else if (count >= 4) {
+                            iconHtml = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>`;
+                            statusText = '符合門檻';
+                        } else {
+                            iconHtml = `<i data-lucide="alert-circle" class="w-4 h-4 text-orange-400"></i>`;
+                            statusText = '預約不足';
+                        }
+
+                        let crownHtml = '';
+                        if (count === maxDailyAppts && count > 6) {
+                            crownHtml = `<i data-lucide="crown" class="w-5 h-5 text-yellow-500 fill-yellow-400" title="單日最高預約"></i>`;
+                        }
+                        
+                        const consultantBlock = document.createElement('div');
+                        consultantBlock.className = 'bg-morandi-bg/20 rounded-xl p-3 border border-morandi-border/40';
+                        
+                        consultantBlock.innerHTML = `
+                            <div class="flex items-center gap-2 mb-3 border-b border-morandi-border/40 pb-2 flex-wrap">
+                                <div class="flex items-center gap-1.5">
+                                    ${crownHtml}
+                                    <div class="bg-morandi-primary/10 p-1 rounded text-morandi-primary">
+                                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                                    </div>
+                                    <h4 class="text-base font-bold text-morandi-text">${consultantName}</h4>
+                                </div>
+                                
+                                <div class="ml-auto flex items-center gap-2">
+                                    <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-morandi-border/50 shadow-sm" title="${statusText}">
+                                        ${iconHtml}
+                                        <span class="text-xs font-bold text-morandi-text ml-0.5">共 ${count}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        const customersGrid = document.createElement('div');
+                        customersGrid.className = 'grid grid-cols-2 lg:grid-cols-3 gap-2';
+                        
+                        customers.forEach(customer => {
+                            const btn = document.createElement('button');
+                            
+                            let btnClasses = 'border rounded-lg py-1.5 px-1.5 text-center transition-colors shadow-sm text-sm truncate w-full ';
+                            if (customer.hasDoctor) {
+                                btnClasses += 'bg-morandi-primary hover:bg-morandi-primaryHover text-white border-transparent font-bold shadow-md';
+                            } else {
+                                btnClasses += 'bg-white hover:bg-morandi-btnHover text-morandi-text border-morandi-border font-medium';
+                            }
+                            
+                            btn.className = btnClasses;
+                            btn.textContent = customer.name;
+                            btn.onclick = () => openModal(customer.originalIndex);
+                            customersGrid.appendChild(btn);
+                        });
+
+                        consultantBlock.appendChild(customersGrid);
+                        dateBody.appendChild(consultantBlock);
+                    });
+
+                    dateBlock.appendChild(dateBody);
+                    weekContentContainer.appendChild(dateBlock);
+                });
+
+                weekCard.appendChild(weekContentContainer);
+                container.appendChild(weekCard);
+            });
+
+            lucide.createIcons();
+            scrollToToday();
+        }
+
+        function scrollToToday() {
+            const todayObj = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Taipei"}));
+            const yyyy = todayObj.getFullYear();
+            const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(todayObj.getDate()).padStart(2, '0');
+            const todayString = `${yyyy}-${mm}-${dd}`;
+            
+            const weekInfo = getWeekInfo(todayString);
+            if (weekInfo) {
+                const weekId = `week-${weekInfo.mondayStr}`;
+                toggleWeek(weekId, true);
+            }
+            
+            const targetElement = document.getElementById(`date-${todayString}`);
+            
+            if (targetElement) {
+                toggleDay(todayString, true);
+
+                setTimeout(() => {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.classList.add('ring-4', 'ring-morandi-primary', 'ring-opacity-50');
+                    setTimeout(() => {
+                        targetElement.classList.remove('ring-4', 'ring-morandi-primary', 'ring-opacity-50');
+                    }, 2500);
+                }, 400); 
+            }
+        }
+
+        function openModal(originalIndex) {
+            const row = globalRawData[originalIndex];
+            if (!row) return;
+
+            const getCol = (name) => {
+                const key = Object.keys(row).find(k => k.trim() === name);
+                return key ? (row[key] || '').trim() : '無';
+            };
+
+            document.getElementById('modal-A').textContent = getCol('客戶編號');
+            document.getElementById('modal-B').textContent = getCol('客戶電話');
+            document.getElementById('modal-C').textContent = getCol('客戶姓名');
+            document.getElementById('modal-G').textContent = getCol('預約狀況');
+            document.getElementById('modal-J').textContent = getCol('預約時間');
+            document.getElementById('modal-M').textContent = getCol('協助人員');
+            document.getElementById('modal-N').textContent = getCol('預約醫師');
+            document.getElementById('modal-O').textContent = getCol('預約療程');
+            document.getElementById('modal-P').textContent = getCol('備註');
+
+            const modal = document.getElementById('customerModal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.remove('hidden');
+            void modal.offsetWidth; 
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('customerModal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        document.getElementById('customerModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+    </script>
+</body>
+</html>

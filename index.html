@@ -100,37 +100,36 @@
         <!-- 總數統計與圖例說明區 (上傳後才會顯示) -->
         <div id="summaryStats" class="mt-6 pt-5 border-t border-morandi-border flex flex-wrap gap-4 items-center hidden">
             <!-- 總預約數標籤 -->
-            <div class="bg-morandi-primary text-white px-5 py-2 rounded-xl text-lg font-bold flex items-center gap-2 shadow-sm">
+            <div class="bg-morandi-primary text-white px-5 py-2 rounded-xl text-lg font-bold flex items-center gap-2 shadow-sm shrink-0">
                 <i data-lucide="bar-chart-big" class="w-6 h-6"></i>
                 檔案總預約數：<span id="totalApptDisplay" class="text-2xl">0</span> 位
             </div>
             
             <!-- 顏色與圖示說明 -->
             <div class="flex flex-wrap items-center gap-4 text-sm text-morandi-text bg-morandi-bg px-4 py-2 rounded-xl border border-morandi-border/50">
-                <div class="flex items-center gap-1.5 font-bold text-morandi-primary">
+                <div class="flex items-center gap-1.5 font-bold text-morandi-primary whitespace-nowrap">
                     <span class="w-4 h-4 rounded-md bg-morandi-primary border border-morandi-primary block shadow-sm"></span> 
                     含預約醫師
                 </div>
                 <div class="w-px h-5 bg-morandi-border hidden sm:block"></div>
-                <div class="flex items-center gap-1 font-medium">
+                <div class="flex items-center gap-1 font-medium whitespace-nowrap">
                     <i data-lucide="crown" class="w-4 h-4 text-yellow-500 fill-yellow-400"></i> 單日冠軍(>6位)
                 </div>
                 <div class="w-px h-5 bg-morandi-border hidden sm:block"></div>
-                <div class="flex items-center gap-3">
-                    <span class="flex items-center gap-1"><i data-lucide="flame" class="w-4 h-4 text-red-500"></i>優良(≥6)</span>
-                    <span class="flex items-center gap-1"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>達標(4-5)</span>
-                    <span class="flex items-center gap-1"><i data-lucide="alert-circle" class="w-4 h-4 text-orange-400"></i>不足(<4)</span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="flex items-center gap-1 whitespace-nowrap"><i data-lucide="flame" class="w-4 h-4 text-red-500"></i>優良(≥6)</span>
+                    <span class="flex items-center gap-1 whitespace-nowrap"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>達標(4-5)</span>
+                    <span class="flex items-center gap-1 whitespace-nowrap"><i data-lucide="alert-circle" class="w-4 h-4 text-orange-400"></i>不足(<4)</span>
                 </div>
             </div>
         </div>
 
-        <!-- 諮詢師表現總覽 (密集網格排版，適合電腦畫面) -->
+        <!-- 諮詢師表現總覽 (密集網格排版) -->
         <div id="consultantSummary" class="mt-5 pt-5 border-t border-morandi-border hidden">
             <h3 class="text-lg md:text-xl font-bold text-morandi-text mb-3 flex items-center gap-2">
                 <i data-lucide="award" class="w-5 h-5 text-morandi-primary"></i>
                 所有諮詢人員表現總覽
             </h3>
-            <!-- 改為高密度 grid，超寬螢幕可排 8 列 -->
             <div id="consultantStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                 <!-- 內容由 JS 產生 -->
             </div>
@@ -155,7 +154,6 @@
     <!-- 顧客詳細資訊 彈出視窗 (Modal) -->
     <div id="customerModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-morandi-card w-full max-w-2xl rounded-2xl shadow-xl border border-morandi-border transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-            <!-- Modal 標題 -->
             <div class="bg-morandi-primary px-6 py-4 flex justify-between items-center">
                 <h3 class="text-white font-bold text-lg flex items-center gap-2">
                     <i data-lucide="user" class="w-5 h-5"></i>
@@ -166,7 +164,6 @@
                 </button>
             </div>
             
-            <!-- Modal 內容區 -->
             <div class="p-6 overflow-y-auto custom-scrollbar">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-morandi-bg p-3 rounded-lg border border-morandi-border/50">
@@ -208,7 +205,6 @@
                 </div>
             </div>
             
-            <!-- Modal 底部 -->
             <div class="bg-morandi-bg px-6 py-4 border-t border-morandi-border flex justify-end">
                 <button onclick="closeModal()" class="bg-morandi-primary hover:bg-morandi-primaryHover text-white px-6 py-2 rounded-lg shadow-sm transition-colors font-medium">
                     關閉
@@ -526,18 +522,20 @@
                 weekCard.className = 'bg-morandi-card border border-morandi-border rounded-2xl shadow-sm overflow-hidden mb-6';
                 weekCard.id = weekId;
                 
+                // 週標題區域：套用 flex-wrap 防破版
                 const weekHeader = document.createElement('div');
-                weekHeader.className = 'bg-morandi-bg/80 hover:bg-morandi-border/40 cursor-pointer px-6 py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 transition-colors';
+                weekHeader.className = 'bg-morandi-bg/80 hover:bg-morandi-border/40 cursor-pointer px-4 md:px-6 py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 transition-colors';
                 weekHeader.onclick = () => toggleWeek(weekId);
                 
                 weekHeader.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="chevron-down" id="icon-${weekId}" class="w-6 h-6 text-morandi-primary transition-transform duration-300 transform -rotate-90"></i>
-                        <h2 class="text-xl md:text-2xl font-bold text-morandi-text">
-                            ${weekLabelStr} <span class="text-base text-morandi-light font-normal ml-2">當區間明細</span>
+                    <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                        <i data-lucide="chevron-down" id="icon-${weekId}" class="w-6 h-6 text-morandi-primary transition-transform duration-300 transform -rotate-90 shrink-0"></i>
+                        <h2 class="text-lg md:text-xl lg:text-2xl font-bold text-morandi-text flex flex-wrap items-center gap-1 md:gap-2">
+                            <span class="whitespace-nowrap">${weekLabelStr}</span>
+                            <span class="text-sm md:text-base text-morandi-light font-normal whitespace-nowrap">當區間明細</span>
                         </h2>
                     </div>
-                    <div class="bg-morandi-primary text-white px-4 py-1.5 rounded-full text-sm md:text-base font-bold flex items-center justify-center gap-1 shadow-sm w-fit">
+                    <div class="bg-morandi-primary text-white px-3 md:px-4 py-1.5 rounded-full text-sm md:text-base font-bold flex items-center justify-center gap-1 shadow-sm w-fit whitespace-nowrap shrink-0">
                         <i data-lucide="calendar-check-2" class="w-4 h-4"></i>
                         本區間總預約：${weekObj.totalAppointments} 位
                     </div>
@@ -561,15 +559,17 @@
                     const daysOfWeek = ['日', '一', '二', '三', '四', '五', '六'];
                     const dayString = !isNaN(dateObj) ? `(星期${daysOfWeek[dateObj.getDay()]})` : '';
 
+                    // 單日標題區域：套用 flex-wrap 防破版
                     const dateHeader = document.createElement('div');
-                    dateHeader.className = 'bg-morandi-bg/60 hover:bg-morandi-bg cursor-pointer px-4 py-3 flex justify-between items-center border-b border-morandi-border/60 transition-colors shrink-0';
+                    dateHeader.className = 'bg-morandi-bg/60 hover:bg-morandi-bg cursor-pointer px-3 md:px-4 py-3 flex flex-wrap justify-between items-center gap-2 border-b border-morandi-border/60 transition-colors shrink-0';
                     dateHeader.onclick = () => toggleDay(date);
                     dateHeader.innerHTML = `
-                        <h3 class="text-lg font-bold text-morandi-text flex items-center gap-2">
-                            <i data-lucide="chevron-down" id="day-icon-${date}" class="w-5 h-5 text-morandi-primary transition-transform duration-300"></i>
-                            ${date} <span class="text-sm text-morandi-light font-normal">${dayString}</span>
+                        <h3 class="text-base md:text-lg font-bold text-morandi-text flex items-center gap-1 flex-wrap">
+                            <i data-lucide="chevron-down" id="day-icon-${date}" class="w-5 h-5 text-morandi-primary transition-transform duration-300 shrink-0"></i>
+                            <span class="whitespace-nowrap">${date}</span>
+                            <span class="text-xs md:text-sm text-morandi-light font-normal whitespace-nowrap ml-0.5">${dayString}</span>
                         </h3>
-                        <span class="text-morandi-primary font-bold text-sm bg-white px-2.5 py-1 rounded-full border border-morandi-border shadow-sm">
+                        <span class="text-morandi-primary font-bold text-xs md:text-sm bg-white px-2.5 py-1 rounded-full border border-morandi-border shadow-sm whitespace-nowrap shrink-0">
                             單日：${dayData.totalAppointments} 位
                         </span>
                     `;

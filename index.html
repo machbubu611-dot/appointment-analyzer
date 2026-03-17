@@ -102,7 +102,7 @@
             <!-- 總預約數標籤 -->
             <div class="bg-morandi-primary text-white px-5 py-2 rounded-xl text-lg font-bold flex items-center gap-2 shadow-sm shrink-0">
                 <i data-lucide="bar-chart-big" class="w-6 h-6"></i>
-                檔案總預約數：<span id="totalApptDisplay" class="text-2xl">0</span> 位
+                篩選區間總預約：<span id="totalApptDisplay" class="text-2xl">0</span> 位
             </div>
             
             <!-- 顏色與圖示說明 -->
@@ -126,10 +126,22 @@
 
         <!-- 諮詢師表現總覽 (密集網格排版) -->
         <div id="consultantSummary" class="mt-5 pt-5 border-t border-morandi-border hidden">
-            <h3 class="text-lg md:text-xl font-bold text-morandi-text mb-3 flex items-center gap-2">
-                <i data-lucide="award" class="w-5 h-5 text-morandi-primary"></i>
-                所有諮詢人員表現總覽
-            </h3>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                <h3 class="text-lg md:text-xl font-bold text-morandi-text flex items-center gap-2 shrink-0">
+                    <i data-lucide="award" class="w-5 h-5 text-morandi-primary"></i>
+                    所有諮詢人員表現總覽
+                </h3>
+
+                <!-- 區間篩選器 -->
+                <div class="flex flex-wrap items-center gap-2 text-sm bg-morandi-bg/40 p-1.5 md:p-2 rounded-lg border border-morandi-border/50">
+                    <span class="font-bold text-morandi-text ml-1 flex items-center gap-1"><i data-lucide="filter" class="w-4 h-4"></i>日期區間：</span>
+                    <input type="date" id="filterStartDate" class="border border-morandi-border rounded-md px-2 py-1 text-morandi-text outline-none focus:border-morandi-primary bg-white">
+                    <span class="text-morandi-light">至</span>
+                    <input type="date" id="filterEndDate" class="border border-morandi-border rounded-md px-2 py-1 text-morandi-text outline-none focus:border-morandi-primary bg-white">
+                    <button onclick="applyDateFilter()" class="bg-morandi-primary hover:bg-morandi-primaryHover text-white px-3 py-1 rounded-md shadow-sm font-bold transition-colors ml-1">套用</button>
+                    <button onclick="clearDateFilter()" class="bg-white hover:bg-morandi-btnHover text-morandi-text px-3 py-1 rounded-md border border-morandi-border shadow-sm font-bold transition-colors">清除</button>
+                </div>
+            </div>
             <div id="consultantStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                 <!-- 內容由 JS 產生 -->
             </div>
@@ -279,6 +291,10 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            // 匯入新檔案時清空篩選器
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -287,13 +303,27 @@
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
-                    processData(jsonData);
+                    processData(jsonData, true); // 傳入 true 表示為初始載入
                 } catch (error) {
                     alert('讀取檔案失敗，請確認是否為有效的 Excel 檔案：' + error.message);
                 }
             };
             reader.readAsArrayBuffer(file);
         });
+
+        // 套用日期篩選
+        function applyDateFilter() {
+            if (globalRawData.length === 0) return;
+            processData(globalRawData, false);
+        }
+
+        // 清除日期篩選
+        function clearDateFilter() {
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            if (globalRawData.length === 0) return;
+            processData(globalRawData, false);
+        }
 
         function getWeekInfo(dateString) {
             const d = new Date(dateString);
@@ -317,10 +347,14 @@
             };
         }
 
-        function processData(data) {
+        function processData(data, isInitialLoad = false) {
             globalRawData = data;
             const weeklyData = {}; 
             let totalMonthlyCount = 0; 
+
+            // 取得目前篩選的區間
+            const filterStart = document.getElementById('filterStartDate').value;
+            const filterEnd = document.getElementById('filterEndDate').value;
 
             data.forEach((row, index) => {
                 const getCol = (name) => {
@@ -334,6 +368,10 @@
                 const doctor = getCol('預約醫師');
 
                 if (!date || !consultant || status.includes('取消')) return;
+
+                // 篩選區間邏輯 (格式為 YYYY-MM-DD，可直接字串比對)
+                if (filterStart && date < filterStart) return;
+                if (filterEnd && date > filterEnd) return;
 
                 totalMonthlyCount++;
 
@@ -379,7 +417,7 @@
             document.getElementById('totalApptDisplay').textContent = totalMonthlyCount;
             document.getElementById('summaryStats').classList.remove('hidden');
 
-            renderData(weeklyData);
+            renderData(weeklyData, isInitialLoad);
         }
 
         function toggleWeek(weekId, forceOpen = false) {
@@ -398,23 +436,7 @@
             }
         }
 
-        function toggleDay(dateId, forceOpen = false) {
-            const content = document.getElementById(`day-content-${dateId}`);
-            const icon = document.getElementById(`day-icon-${dateId}`);
-            if (!content || !icon) return;
-
-            const isHidden = content.classList.contains('hidden');
-
-            if (isHidden || forceOpen) {
-                content.classList.remove('hidden');
-                icon.classList.remove('-rotate-90');
-            } else if (!forceOpen) {
-                content.classList.add('hidden');
-                icon.classList.add('-rotate-90');
-            }
-        }
-
-        function renderData(weeklyData) {
+        function renderData(weeklyData, isInitialLoad = false) {
             const container = document.getElementById('resultsContainer');
             container.innerHTML = ''; 
 
@@ -726,7 +748,11 @@
             });
 
             lucide.createIcons();
-            scrollToToday();
+            
+            // 只有在初次載入檔案時才捲動至今天，避免篩選時畫面亂跳
+            if (isInitialLoad) {
+                scrollToToday();
+            }
         }
 
         function scrollToToday() {

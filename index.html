@@ -20,7 +20,7 @@
             --cancel-color: #A37F7F;
             --cancel-bg: #F0ECEC;
 
-            /* 三大核心關鍵指標色彩（高對比、易閱讀、各具特色） */
+            /* 三大關鍵指標色彩 */
             --color-actual: #1862AC;      /* 實際預約：沉穩湛藍 */
             --color-arrived: #15803D;     /* 實際到店：翠綠 */
             --color-rate: #B45309;        /* 到店率：琥珀暖橘 */
@@ -203,6 +203,68 @@
 
         .btn-clear:hover { background-color: #F0ECEC; }
 
+        /* ================= 簡潔人員表現數據總表樣式 ================= */
+        .simple-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: white;
+        }
+
+        .simple-stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .simple-stats-table thead {
+            background-color: #F7EFEF;
+            color: var(--accent-dark);
+            border-bottom: 2px solid var(--secondary-morandi);
+        }
+
+        .simple-stats-table th {
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            letter-spacing: 0.5px;
+        }
+
+        .simple-stats-table th:first-child,
+        .simple-stats-table td:first-child {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .simple-stats-table tbody tr {
+            border-bottom: 1px solid #F2E8E8;
+            transition: background 0.15s;
+        }
+
+        .simple-stats-table tbody tr:hover {
+            background-color: #FAF4F4;
+        }
+
+        .simple-stats-table td {
+            padding: 10px 14px;
+            color: var(--text-dark);
+        }
+
+        .simple-stats-table tfoot {
+            background-color: #F9F2F2;
+            border-top: 2px solid var(--secondary-morandi);
+            font-weight: 700;
+        }
+
+        .simple-stats-table tfoot td {
+            padding: 11px 14px;
+            color: var(--accent-dark);
+        }
+
         /* 人員總覽格狀卡片 */
         .consultant-grid {
             display: grid;
@@ -237,7 +299,7 @@
             gap: 6px;
         }
 
-        /* 卡片數據區塊：獨立跳行、告別擁擠 */
+        /* 卡片數據區塊：獨立跳行 */
         .card-booking-box {
             background: #FFFBFB;
             border: 1px solid #EADEDE;
@@ -391,7 +453,6 @@
             border: 1px solid #F3EDED;
         }
 
-        /* 人員名稱與多數據跳行排列結構 */
         .con-info-column {
             flex-shrink: 0;
             display: flex;
@@ -603,7 +664,7 @@
         <div class="overview-header">
             <div class="overview-title-group">
                 <div class="overview-title">
-                    <span>🎗️️</span> 所有諮詢人員表現總覽
+                    <span>🎗</span> 所有諮詢人員表現總覽
                 </div>
                 <!-- 格式：總預約 XX (實際預約 XX + 取消預約 X) 實際到店 XX 到店率: XX% -->
                 <div class="range-overall-badge" id="rangeSummaryBadge">
@@ -621,6 +682,29 @@
             </div>
         </div>
 
+        <!-- 最上方簡潔人員數據表現總表 -->
+        <div class="simple-table-wrapper">
+            <table class="simple-stats-table">
+                <thead>
+                    <tr>
+                        <th>預約人員</th>
+                        <th>總預約數</th>
+                        <th>實際預約</th>
+                        <th>取消預約</th>
+                        <th>實際到店</th>
+                        <th>到店率</th>
+                    </tr>
+                </thead>
+                <tbody id="simpleTableBody">
+                    <!-- 動態填入人員統計資料 -->
+                </tbody>
+                <tfoot id="simpleTableFoot">
+                    <!-- 動態填入合計列 -->
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- 人員表現卡片列表 (評定次數) -->
         <div class="consultant-grid" id="consultantOverviewGrid">
             <!-- 動態生成諮詢師表現卡片 -->
         </div>
@@ -821,15 +905,61 @@
             });
         });
 
-        // 渲染總覽卡片
-        renderOverviewGrid(Object.values(statsByConsultant).sort((a, b) => (b.totalValid + b.totalCancel) - (a.totalValid + a.totalCancel)));
+        // 排序清單（按總預約數降冪排序）
+        const sortedConsultantList = Object.values(statsByConsultant).sort((a, b) => (b.totalValid + b.totalCancel) - (a.totalValid + a.totalCancel));
 
-        // 渲染每日明細清單
+        // 渲染 1：最上方簡潔人員數據表現總表
+        renderSimpleTable(sortedConsultantList, totalRangeAll, totalRangeValid, totalRangeCancel, totalRangeArrived, totalRangeRate);
+
+        // 渲染 2：總覽卡片
+        renderOverviewGrid(sortedConsultantList);
+
+        // 渲染 3：每日明細清單
         const sortedDates = Object.keys(dailyMap).sort();
         renderDailySection(sortedDates.map(d => dailyMap[d]));
     }
 
-    // 渲染總覽卡片：分行獨立呈現，避免長度卡住，提高易讀性
+    // 渲染簡潔人員數據表現總表
+    function renderSimpleTable(list, totalAll, totalValid, totalCancel, totalArrived, totalRate) {
+        const tbody = document.getElementById('simpleTableBody');
+        const tfoot = document.getElementById('simpleTableFoot');
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; color:#999;">選取區間內無預約資料</td></tr>';
+            return;
+        }
+
+        list.forEach(c => {
+            const total = c.totalValid + c.totalCancel;
+            const rate = calculateRate(c.totalArrived, total);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:700; color:var(--accent-dark);">👤 ${c.name}</td>
+                <td style="font-weight:700;">${total}</td>
+                <td><span class="val-actual">${c.totalValid}</span></td>
+                <td><span class="val-cancel">${c.totalCancel}</span></td>
+                <td><span class="val-arrived">${c.totalArrived}</span></td>
+                <td><span class="val-rate">${rate}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 合計列
+        tfoot.innerHTML = `
+            <tr>
+                <td>合計</td>
+                <td>${totalAll}</td>
+                <td><span class="val-actual">${totalValid}</span></td>
+                <td><span class="val-cancel">${totalCancel}</span></td>
+                <td><span class="val-arrived">${totalArrived}</span></td>
+                <td><span class="val-rate">${totalRate}</span></td>
+            </tr>
+        `;
+    }
+
+    // 渲染總覽卡片：分行獨立呈現
     function renderOverviewGrid(list) {
         const grid = document.getElementById('consultantOverviewGrid');
         grid.innerHTML = '';
@@ -885,7 +1015,7 @@
         });
     }
 
-    // 渲染每日細項：分行清晰呈現
+    // 渲染每日細項
     function renderDailySection(dayList) {
         const container = document.getElementById('dailyListContainer');
         container.innerHTML = '';
@@ -916,7 +1046,7 @@
                     tagsHtml += `<span class="all-canceled-note">（當日預約均已取消）</span>`;
                 }
 
-                // 正常預約顧客 (列在前方)
+                // 正常預約顧客
                 con.validCustomers.forEach(cust => {
                     const jsonStr = JSON.stringify(cust).replace(/"/g, '&quot;');
                     const checkIcon = cust.isCompleted ? '<span class="icon-completed" title="服務狀態：已完成">✓</span> ' : '';

@@ -23,6 +23,7 @@
             --badge-target: #3CA577;
             --badge-low: #E28834;
             --badge-champion: #D4A017;
+            --arrived-color: #2B6E48;
             --shadow: 0 4px 12px rgba(99, 67, 67, 0.06);
         }
 
@@ -117,17 +118,18 @@
             background: var(--primary-morandi-light);
             border: 1px solid var(--secondary-morandi);
             color: var(--accent-dark);
-            padding: 5px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.92rem;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
 
-        .range-overall-badge .sub-actual { color: #2E7D32; }
-        .range-overall-badge .sub-cancel { color: #C62828; }
+        .sub-actual { color: #2E7D32; }
+        .sub-cancel { color: #C62828; }
+        .sub-arrived { color: var(--arrived-color); font-weight: 700; }
 
         /* 日期區間過濾列 */
         .filter-group {
@@ -178,7 +180,7 @@
         /* 人員總覽格狀卡片 */
         .consultant-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
             gap: 16px;
         }
 
@@ -214,20 +216,20 @@
             color: white;
             font-size: 0.82rem;
             font-weight: 600;
-            padding: 6px 10px;
+            padding: 7px 10px;
             border-radius: 6px;
             margin-bottom: 14px;
             width: 100%;
             text-align: center;
-            line-height: 1.35;
+            line-height: 1.4;
         }
 
         .card-booking-sub {
             display: block;
-            font-size: 0.76rem;
+            font-size: 0.74rem;
             font-weight: 400;
             opacity: 0.95;
-            margin-top: 2px;
+            margin-top: 3px;
         }
 
         .card-stats-list {
@@ -327,11 +329,9 @@
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+            flex-wrap: wrap;
         }
-
-        .sub-tag-actual { color: #2E7D32; font-weight: 500; }
-        .sub-tag-cancel { color: #C62828; font-weight: 500; }
 
         /* 每日名單緊密排版 */
         .daily-consultants-list {
@@ -352,13 +352,15 @@
 
         .con-name-badge {
             flex-shrink: 0;
-            font-size: 0.88rem;
+            font-size: 0.86rem;
             font-weight: 600;
             color: var(--accent-dark);
             display: flex;
             align-items: center;
             gap: 4px;
             padding-top: 3px;
+            flex-wrap: wrap;
+            max-width: 320px;
         }
 
         .customer-tags-flow {
@@ -378,7 +380,7 @@
             margin-right: 4px;
         }
 
-        /* 正常顧客標籤 */
+        /* 正常顧客按鈕標籤 */
         .customer-btn {
             background: white;
             border: 1px solid var(--secondary-morandi);
@@ -389,6 +391,9 @@
             cursor: pointer;
             transition: all 0.15s ease;
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .customer-btn:hover {
@@ -397,7 +402,18 @@
             border-color: var(--primary-morandi);
         }
 
-        /* 取消顧客標籤：劃線、柔和灰底、固定排在後方 */
+        /* 已完成服務 (到店) 的打勾圖示 */
+        .icon-completed {
+            color: #2E7D32;
+            font-weight: bold;
+            font-size: 0.88rem;
+        }
+
+        .customer-btn:hover .icon-completed {
+            color: #A5D6A7;
+        }
+
+        /* 取消顧客標籤 */
         .customer-btn.is-canceled {
             background: var(--cancel-bg);
             border: 1px dashed #D0BCBC;
@@ -534,9 +550,9 @@
                 <div class="overview-title">
                     <span>🎗️</span> 所有諮詢人員表現總覽
                 </div>
-                <!-- 區間總表總數呈現 -->
+                <!-- 區間總表總數呈現：總預約 XX(實際 XX)(取消 X) 到店 XX -->
                 <div class="range-overall-badge" id="rangeSummaryBadge">
-                    總預約 0 (實際 0)(取消 0)
+                    總預約 0 (實際 0)(取消 0) 到店 0
                 </div>
             </div>
 
@@ -565,10 +581,10 @@
     </div>
 </div>
 
-<!-- 浮動置頂箭頭按鈕 -->
+<!-- 浮動置頂按鈕 -->
 <button class="fab-scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="回頂部">↑</button>
 
-<!-- 顧客詳情彈跳視窗 (A, B, C, G, J, M, N, O, P) -->
+<!-- 顧客詳情彈跳視窗 (A, B, C, G, H, J, M, N, O, P) -->
 <div class="modal-overlay" id="customerModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -586,26 +602,32 @@
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+    // 解析每列資料，納入 H 欄位 (服務狀態)
     function parseRows(rawRows) {
         const rows = [];
         rawRows.forEach(r => {
             const date = (r['預約日期'] || r['I'] || '').toString().trim();
             const consultant = (r['預約諮詢師'] || r['L'] || '未指定諮詢師').toString().trim();
-            const status = (r['預約狀況'] || r['G'] || '').toString().trim();
+            const statusG = (r['預約狀況'] || r['G'] || '').toString().trim();
+            const statusH = (r['服務狀態'] || r['H'] || '').toString().trim();
 
             if (!date || date === '預約日期') return;
 
-            const isCanceled = status.includes('取消');
+            const isCanceled = statusG.includes('取消') || statusH.includes('取消');
+            const isCompleted = statusH.includes('已完成'); // 到店判定：服務狀態已完成
 
             rows.push({
                 date: date,
                 consultant: consultant,
-                status: status,
+                statusG: statusG,
+                statusH: statusH,
                 isCanceled: isCanceled,
+                isCompleted: isCompleted,
                 A: r['客戶編號'] || r['A'] || '',
                 B: r['客戶電話'] || r['B'] || '',
                 C: r['客戶姓名'] || r['C'] || '',
-                G: status,
+                G: statusG,
+                H: statusH,
                 J: r['預約時間'] || r['J'] || '',
                 M: r['協助人員'] || r['M'] || '',
                 N: r['預約醫師'] || r['N'] || '',
@@ -625,6 +647,7 @@
 
         let totalRangeValid = 0;
         let totalRangeCancel = 0;
+        let totalRangeArrived = 0;
 
         // 1. 每日聚合
         const dailyMap = {};
@@ -634,6 +657,7 @@
                     date: row.date,
                     validCount: 0,
                     cancelCount: 0,
+                    arrivedCount: 0,
                     consultants: {}
                 };
             }
@@ -644,6 +668,10 @@
             } else {
                 dailyMap[row.date].validCount++;
                 totalRangeValid++;
+                if (row.isCompleted) {
+                    dailyMap[row.date].arrivedCount++;
+                    totalRangeArrived++;
+                }
             }
 
             if (!dailyMap[row.date].consultants[row.consultant]) {
@@ -651,28 +679,35 @@
                     name: row.consultant,
                     validCount: 0,
                     cancelCount: 0,
+                    arrivedCount: 0,
                     validCustomers: [],
                     canceledCustomers: []
                 };
             }
 
-            // 分流：實際預約 vs 取消預約 (便於後續將取消顧客固定排在最後方)
+            const conObj = dailyMap[row.date].consultants[row.consultant];
             if (row.isCanceled) {
-                dailyMap[row.date].consultants[row.consultant].cancelCount++;
-                dailyMap[row.date].consultants[row.consultant].canceledCustomers.push(row);
+                conObj.cancelCount++;
+                conObj.canceledCustomers.push(row);
             } else {
-                dailyMap[row.date].consultants[row.consultant].validCount++;
-                dailyMap[row.date].consultants[row.consultant].validCustomers.push(row);
+                conObj.validCount++;
+                if (row.isCompleted) {
+                    conObj.arrivedCount++;
+                }
+                conObj.validCustomers.push(row);
             }
         });
 
-        // 更新頂部總表指標：總預約 XX(實際 XX)(取消 X)
+        // 頂部全區間總覽標籤：總預約 XX(實際 XX)(取消 X) 到店 XX
         const totalRangeAll = totalRangeValid + totalRangeCancel;
         document.getElementById('rangeSummaryBadge').innerHTML = `
-            總預約 ${totalRangeAll} <span class="sub-actual">(實際 ${totalRangeValid})</span><span class="sub-cancel">(取消 ${totalRangeCancel})</span>
+            總預約 ${totalRangeAll} 
+            <span class="sub-actual">(實際 ${totalRangeValid})</span>
+            <span class="sub-cancel">(取消 ${totalRangeCancel})</span>
+            <span class="sub-arrived">到店 ${totalRangeArrived}</span>
         `;
 
-        // 2. 計算人員區間表現統計
+        // 2. 人員區間表現統計
         const statsByConsultant = {};
         filteredRows.forEach(r => {
             if (!statsByConsultant[r.consultant]) {
@@ -680,6 +715,7 @@
                     name: r.consultant,
                     totalValid: 0,
                     totalCancel: 0,
+                    totalArrived: 0,
                     championCount: 0,
                     goodCount: 0,
                     targetCount: 0,
@@ -690,10 +726,13 @@
                 statsByConsultant[r.consultant].totalCancel++;
             } else {
                 statsByConsultant[r.consultant].totalValid++;
+                if (r.isCompleted) {
+                    statsByConsultant[r.consultant].totalArrived++;
+                }
             }
         });
 
-        // 逐日評定冠軍與達標
+        // 逐日評定冠軍與達標 (依有效預約計算)
         Object.keys(dailyMap).forEach(d => {
             const dayObj = dailyMap[d];
             let maxCount = -1;
@@ -729,7 +768,7 @@
         renderDailySection(sortedDates.map(d => dailyMap[d]));
     }
 
-    // 渲染總覽卡片
+    // 渲染總覽卡片：總預約數 XX，副標 (實際 XX)(取消 X) 到店 XX
     function renderOverviewGrid(list) {
         const grid = document.getElementById('consultantOverviewGrid');
         grid.innerHTML = '';
@@ -749,7 +788,9 @@
                 </div>
                 <div class="card-booking-badge">
                     <div>總預約數 ${totalAppointments}</div>
-                    <span class="card-booking-sub">(實際 ${c.totalValid} + 取消 ${c.totalCancel})</span>
+                    <span class="card-booking-sub">
+                        (實際 ${c.totalValid})(取消 ${c.totalCancel}) 到店 ${c.totalArrived}
+                    </span>
                 </div>
                 <div class="card-stats-list">
                     <div class="stat-item">
@@ -774,7 +815,7 @@
         });
     }
 
-    // 渲染每日細項 (含取消顧客排在最後、刪除線標註)
+    // 渲染每日細項：總預約 XX(實際 XX)(取消 X) 到店 XX
     function renderDailySection(dayList) {
         const container = document.getElementById('dailyListContainer');
         container.innerHTML = '';
@@ -798,18 +839,19 @@
                 const conTotal = con.validCount + con.cancelCount;
                 let tagsHtml = '';
 
-                // 1. 若該諮詢師當天所有預約均已取消，保留提示文字
+                // 全數取消時的文字提醒
                 if (con.validCount === 0 && con.cancelCount > 0) {
                     tagsHtml += `<span class="all-canceled-note">（當日預約均已取消）</span>`;
                 }
 
-                // 2. 正常預約顧客列在前方
+                // 1. 正常預約顧客 (列在前方)
                 con.validCustomers.forEach(cust => {
                     const jsonStr = JSON.stringify(cust).replace(/"/g, '&quot;');
-                    tagsHtml += `<button class="customer-btn" onclick="showCustomerModal(${jsonStr})">${cust.C || '顧客'}</button>`;
+                    const checkIcon = cust.isCompleted ? '<span class="icon-completed" title="服務狀態：已完成">✓</span> ' : '';
+                    tagsHtml += `<button class="customer-btn" onclick="showCustomerModal(${jsonStr})">${checkIcon}${cust.C || '顧客'}</button>`;
                 });
 
-                // 3. 取消顧客固定排列在最後方，加上刪除線樣式
+                // 2. 取消預約顧客 (固定排在最後方，帶有刪除線)
                 con.canceledCustomers.forEach(cust => {
                     const jsonStr = JSON.stringify(cust).replace(/"/g, '&quot;');
                     tagsHtml += `<button class="customer-btn is-canceled" onclick="showCustomerModal(${jsonStr})" title="預約狀況：取消">${cust.C || '顧客'}</button>`;
@@ -819,7 +861,8 @@
                     <div class="daily-con-row">
                         <div class="con-name-badge">
                             <span>✦</span> ${con.name}：${conTotal} 
-                            <span class="sub-tag-actual">(實際 ${con.validCount})</span><span class="sub-tag-cancel">(取消 ${con.cancelCount})</span>
+                            <span class="sub-actual">(實際 ${con.validCount})</span><span class="sub-cancel">(取消 ${con.cancelCount})</span>
+                            <span class="sub-arrived">到店 ${con.arrivedCount}</span>
                         </div>
                         <div class="customer-tags-flow">
                             ${tagsHtml}
@@ -836,8 +879,9 @@
                     </div>
                     <div class="daily-total-badge">
                         總預約 ${totalDayAppointments} 
-                        <span class="sub-tag-actual">(實際 ${day.validCount})</span>
-                        <span class="sub-tag-cancel">(取消 ${day.cancelCount})</span>
+                        <span class="sub-actual">(實際 ${day.validCount})</span>
+                        <span class="sub-cancel">(取消 ${day.cancelCount})</span>
+                        <span class="sub-arrived">到店 ${day.arrivedCount}</span>
                     </div>
                 </div>
                 <div class="daily-consultants-list">
@@ -855,16 +899,18 @@
         }, 400);
     }
 
+    // 彈出視窗顯示 A, B, C, G, H, J, M, N, O, P 欄位
     function showCustomerModal(cust) {
         document.getElementById('modalCustomerName').innerText = `${cust.C || '顧客'} - 預約明細`;
         const body = document.getElementById('modalCustomerDetails');
-        const isCanceled = cust.G.includes('取消');
+        const isCanceled = cust.isCanceled;
         
         body.innerHTML = `
             <div class="detail-row"><div class="detail-col-label">客戶姓名 (C)</div><div class="detail-col-val">${cust.C || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">客戶編號 (A)</div><div class="detail-col-val">${cust.A || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">客戶電話 (B)</div><div class="detail-col-val">${cust.B || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約狀況 (G)</div><div class="detail-col-val"><span style="color:${isCanceled ? '#C62828' : '#2E7D32'}; font-weight:700;">${cust.G || '-'}</span></div></div>
+            <div class="detail-row"><div class="detail-col-label">服務狀態 (H)</div><div class="detail-col-val"><span style="color:${cust.isCompleted ? '#2E7D32' : '#634343'}; font-weight:600;">${cust.isCompleted ? '✓ ' : ''}${cust.H || '-'}</span></div></div>
             <div class="detail-row"><div class="detail-col-label">預約時間 (J)</div><div class="detail-col-val">${cust.J || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">協助人員 (M)</div><div class="detail-col-val">${cust.M || '無'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約醫師 (N)</div><div class="detail-col-val">${cust.N || '無'}</div></div>

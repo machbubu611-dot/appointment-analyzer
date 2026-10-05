@@ -154,7 +154,7 @@
         /* 人員總覽格狀卡片 */
         .consultant-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 16px;
         }
 
@@ -190,11 +190,20 @@
             color: white;
             font-size: 0.82rem;
             font-weight: 600;
-            padding: 5px 14px;
+            padding: 6px 10px;
             border-radius: 6px;
             margin-bottom: 14px;
             width: 100%;
             text-align: center;
+            line-height: 1.35;
+        }
+
+        .card-booking-sub {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 400;
+            opacity: 0.95;
+            margin-top: 2px;
         }
 
         .card-stats-list {
@@ -224,7 +233,7 @@
             color: var(--text-dark);
         }
 
-        /* 下方每日明細區塊 - 優化緊湊排版 */
+        /* 下方每日明細區塊 - 緊湊排版 */
         .daily-section-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -288,17 +297,23 @@
         .daily-total-badge {
             background: var(--primary-morandi-light);
             color: var(--accent-dark);
-            padding: 4px 12px;
-            border-radius: 16px;
+            padding: 5px 14px;
+            border-radius: 18px;
             font-size: 0.88rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .cancel-span {
-            color: var(--cancel-color);
-            font-weight: normal;
-            font-size: 0.82rem;
-            margin-left: 4px;
+        .sub-tag-actual {
+            color: #2E7D32;
+            font-weight: 500;
+        }
+
+        .sub-tag-cancel {
+            color: #C62828;
+            font-weight: 500;
         }
 
         /* 每日名單緊密排版 */
@@ -320,23 +335,13 @@
 
         .con-name-badge {
             flex-shrink: 0;
-            min-width: 140px;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             font-weight: 600;
             color: var(--accent-dark);
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding-top: 2px;
-        }
-
-        .con-cancel-pill {
-            background: var(--cancel-bg);
-            color: var(--cancel-color);
-            font-size: 0.76rem;
-            padding: 1px 6px;
-            border-radius: 10px;
-            font-weight: normal;
+            gap: 4px;
+            padding-top: 3px;
         }
 
         .customer-tags-flow {
@@ -478,7 +483,7 @@
         </div>
     </div>
 
-    <!-- 上方：所有諮詢人員表現總覽 (依附圖風格刻劃) -->
+    <!-- 上方：所有諮詢人員表現總覽 -->
     <section class="overview-section">
         <div class="overview-header">
             <div class="overview-title">
@@ -528,7 +533,8 @@
 <script>
     // 全域變數
     let allAppointments = []; // 原始所有列資料
-    const todayStr = "2026-03-16"; // 當前系統時間（可配合今天）
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     // 格式化解析每列資料
     function parseRows(rawRows) {
@@ -607,7 +613,6 @@
         // 2. 計算每位諮詢師在該區間內的表現統計（冠軍、優良、達標、不足）
         const statsByConsultant = {};
         
-        // 找出所有出現過的諮詢師
         filteredRows.forEach(r => {
             if (!statsByConsultant[r.consultant]) {
                 statsByConsultant[r.consultant] = {
@@ -627,13 +632,13 @@
             }
         });
 
-        // 逐日評定每一天的表現與冠軍
+        // 逐日評定每一天的表現與冠軍（依實際預約有效數計算）
         Object.keys(dailyMap).forEach(d => {
             const dayObj = dailyMap[d];
             let maxCount = -1;
             const conList = Object.values(dayObj.consultants);
 
-            // 找當日冠軍最大值
+            // 找當日有效預約最高者
             conList.forEach(c => {
                 if (c.validCount > maxCount) maxCount = c.validCount;
             });
@@ -642,7 +647,6 @@
                 const stat = statsByConsultant[c.name];
                 if (!stat) return;
 
-                // 只有預約數大於 0 且等於最高者才算當日冠軍
                 if (maxCount > 0 && c.validCount === maxCount) {
                     stat.championCount++;
                 }
@@ -658,15 +662,15 @@
             });
         });
 
-        // 渲染上方總覽卡片 (依總預約人數由大到小排序)
-        renderOverviewGrid(Object.values(statsByConsultant).sort((a, b) => b.totalValid - a.totalValid));
+        // 渲染上方總覽卡片 (依總預約人數排序)
+        renderOverviewGrid(Object.values(statsByConsultant).sort((a, b) => (b.totalValid + b.totalCancel) - (a.totalValid + a.totalCancel)));
 
-        // 渲染下方每日清單 (依日期由小到大排序)
+        // 渲染下方每日清單
         const sortedDates = Object.keys(dailyMap).sort();
         renderDailySection(sortedDates.map(d => dailyMap[d]));
     }
 
-    // 渲染總覽卡片格
+    // 渲染總覽卡片格：格式為 總預約數20 (實際18+取消2)
     function renderOverviewGrid(list) {
         const grid = document.getElementById('consultantOverviewGrid');
         grid.innerHTML = '';
@@ -677,6 +681,7 @@
         }
 
         list.forEach(c => {
+            const totalAppointments = c.totalValid + c.totalCancel;
             const card = document.createElement('div');
             card.className = 'consultant-card';
             card.innerHTML = `
@@ -684,7 +689,8 @@
                     <span>👤</span> ${c.name}
                 </div>
                 <div class="card-booking-badge">
-                    總預約 : ${c.totalValid} 位 ${c.totalCancel > 0 ? `<span style="font-weight:normal;opacity:0.9;">(取消${c.totalCancel})</span>` : ''}
+                    <div>總預約數 ${totalAppointments}</div>
+                    <span class="card-booking-sub">(實際 ${c.totalValid} + 取消 ${c.totalCancel})</span>
                 </div>
                 <div class="card-stats-list">
                     <div class="stat-item">
@@ -709,7 +715,7 @@
         });
     }
 
-    // 渲染每日細項 (緊湊排版)
+    // 渲染每日細項：格式為 總預約20 (實際18)(取消2)
     function renderDailySection(dayList) {
         const container = document.getElementById('dailyListContainer');
         container.innerHTML = '';
@@ -721,15 +727,17 @@
 
         dayList.forEach(day => {
             const isToday = (day.date === todayStr);
+            const totalDayAppointments = day.validCount + day.cancelCount;
             const card = document.createElement('div');
             card.className = `daily-card ${isToday ? 'today-card' : ''}`;
             card.id = 'date-' + day.date;
 
-            // 諮詢師清單 (依預約人數由多到少)
-            const sortedCons = Object.values(day.consultants).sort((a, b) => b.validCount - a.validCount);
+            // 諮詢師清單排序
+            const sortedCons = Object.values(day.consultants).sort((a, b) => (b.validCount + b.cancelCount) - (a.validCount + a.cancelCount));
             let conRowsHtml = '';
 
             sortedCons.forEach(con => {
+                const conTotal = con.validCount + con.cancelCount;
                 let tagsHtml = '';
                 con.customers.forEach(cust => {
                     const jsonStr = JSON.stringify(cust).replace(/"/g, '&quot;');
@@ -743,8 +751,8 @@
                 conRowsHtml += `
                     <div class="daily-con-row">
                         <div class="con-name-badge">
-                            <span>✦</span> ${con.name}：${con.validCount} 位
-                            <span class="con-cancel-pill">(取消 ${con.cancelCount})</span>
+                            <span>✦</span> ${con.name}：${conTotal} 
+                            <span class="sub-tag-actual">(實際 ${con.validCount})</span><span class="sub-tag-cancel">(取消 ${con.cancelCount})</span>
                         </div>
                         <div class="customer-tags-flow">
                             ${tagsHtml}
@@ -760,8 +768,9 @@
                         ${isToday ? '<span class="today-pill">今日</span>' : ''}
                     </div>
                     <div class="daily-total-badge">
-                        總預約：${day.validCount} 位
-                        <span class="cancel-span">(取消 ${day.cancelCount})</span>
+                        總預約 ${totalDayAppointments} 
+                        <span class="sub-tag-actual">(實際 ${day.validCount})</span>
+                        <span class="sub-tag-cancel">(取消 ${day.cancelCount})</span>
                     </div>
                 </div>
                 <div class="daily-consultants-list">
@@ -790,7 +799,7 @@
             <div class="detail-row"><div class="detail-col-label">客戶電話 (B)</div><div class="detail-col-val">${cust.B || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約狀況 (G)</div><div class="detail-col-val"><span style="color:#A85555;font-weight:600;">${cust.G || '-'}</span></div></div>
             <div class="detail-row"><div class="detail-col-label">預約時間 (J)</div><div class="detail-col-val">${cust.J || '-'}</div></div>
-            <div class="detail-row"><div class="detail-col-label">協助人員 (M)</div><div class="detail-row-val">${cust.M || '無'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">協助人員 (M)</div><div class="detail-col-val">${cust.M || '無'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約醫師 (N)</div><div class="detail-col-val">${cust.N || '無'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約療程 (O)</div><div class="detail-col-val">${cust.O || '無'}</div></div>
             <div class="detail-row"><div class="detail-col-label">備  註 (P)</div><div class="detail-col-val">${cust.P || '無'}</div></div>

@@ -11,21 +11,25 @@
             --bg-color: #F8F3F3;
             --card-bg: #FFFFFF;
             --primary-morandi: #9D6B6B;
-            --primary-morandi-light: #F4E8E8;
+            --primary-morandi-light: #F6EDED;
             --secondary-morandi: #C89F9F;
             --accent-dark: #634343;
-            --text-dark: #4A3A3A;
+            --text-dark: #3E3030;
             --text-muted: #8C7B7B;
             --border-color: #EADCDC;
             --cancel-color: #A37F7F;
             --cancel-bg: #F0ECEC;
+
+            /* 三大核心關鍵指標色彩（高對比、易閱讀、各具特色） */
+            --color-actual: #1862AC;      /* 實際預約：沉穩湛藍 */
+            --color-arrived: #15803D;     /* 實際到店：翠綠 */
+            --color-rate: #B45309;        /* 到店率：琥珀暖橘 */
+
             --badge-good: #DE5347;
             --badge-target: #3CA577;
             --badge-low: #E28834;
             --badge-champion: #D4A017;
-            --actual-green: #1F7A3E;
-            --arrived-blue: #186646;
-            --shadow: 0 4px 12px rgba(99, 67, 67, 0.06);
+            --shadow: 0 4px 14px rgba(99, 67, 67, 0.07);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,7 +46,7 @@
 
         .main-wrapper {
             width: 100%;
-            max-width: 1280px;
+            max-width: 1320px;
         }
 
         /* 頂部操作列 */
@@ -119,9 +123,9 @@
             background: var(--primary-morandi-light);
             border: 1px solid var(--secondary-morandi);
             color: var(--accent-dark);
-            padding: 6px 18px;
+            padding: 7px 18px;
             border-radius: 20px;
-            font-size: 0.94rem;
+            font-size: 0.95rem;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -129,26 +133,28 @@
             flex-wrap: wrap;
         }
 
-        /* 數字醒目標示：實際預約 & 實際到店 粗體放大 */
-        .highlight-actual {
-            color: var(--actual-green);
-            font-size: 1.05em;
+        /* 指標字體加粗放大設定 */
+        .val-actual {
+            color: var(--color-actual);
+            font-size: 1.08em;
             font-weight: 700;
         }
 
-        .highlight-arrived {
-            color: var(--arrived-blue);
+        .val-arrived {
+            color: var(--color-arrived);
             font-size: 1.08em;
-            font-weight: 800;
-            background: rgba(43, 110, 72, 0.08);
-            padding: 1px 6px;
-            border-radius: 4px;
+            font-weight: 700;
         }
 
-        .highlight-cancel {
+        .val-rate {
+            color: var(--color-rate);
+            font-size: 1.08em;
+            font-weight: 700;
+        }
+
+        .val-cancel {
             color: var(--cancel-color);
-            font-size: 0.9em;
-            font-weight: 400;
+            font-weight: 500;
         }
 
         /* 日期區間過濾列 */
@@ -200,7 +206,7 @@
         /* 人員總覽格狀卡片 */
         .consultant-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
             gap: 16px;
         }
 
@@ -217,12 +223,12 @@
 
         .consultant-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(157, 107, 107, 0.15);
+            box-shadow: 0 6px 16px rgba(157, 107, 107, 0.15);
             border-color: var(--secondary-morandi);
         }
 
         .card-person-name {
-            font-size: 1.05rem;
+            font-size: 1.08rem;
             font-weight: 700;
             color: var(--accent-dark);
             margin-bottom: 8px;
@@ -231,46 +237,40 @@
             gap: 6px;
         }
 
-        .card-booking-badge {
-            background-color: var(--primary-morandi);
-            color: white;
-            font-size: 0.84rem;
-            font-weight: 600;
-            padding: 8px 10px;
-            border-radius: 6px;
+        /* 卡片數據區塊：獨立跳行、告別擁擠 */
+        .card-booking-box {
+            background: #FFFBFB;
+            border: 1px solid #EADEDE;
+            border-radius: 8px;
             margin-bottom: 14px;
             width: 100%;
             text-align: center;
-            line-height: 1.45;
+            overflow: hidden;
         }
 
-        .card-booking-sub {
-            display: block;
-            font-size: 0.76rem;
-            font-weight: 400;
-            margin-top: 3px;
-            background: rgba(255, 255, 255, 0.18);
-            border-radius: 4px;
-            padding: 3px 4px;
-        }
-
-        .card-booking-sub .highlight-actual {
-            color: #E8F5E9;
+        .card-booking-header {
+            background-color: var(--primary-morandi);
+            color: white;
+            font-size: 0.92rem;
             font-weight: 700;
-            font-size: 1.08em;
+            padding: 6px 10px;
+            letter-spacing: 0.5px;
         }
 
-        .card-booking-sub .highlight-arrived {
-            color: #C8E6C9;
-            font-weight: 800;
-            font-size: 1.1em;
-            background: transparent;
-            padding: 0;
+        .card-booking-body {
+            padding: 8px 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.82rem;
         }
 
-        .card-booking-sub .highlight-cancel {
-            color: #FFEBEE;
-            opacity: 0.9;
+        .card-stat-line {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .card-stats-list {
@@ -337,7 +337,7 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
             padding-bottom: 10px;
             border-bottom: 1px dashed var(--border-color);
             margin-bottom: 12px;
@@ -364,13 +364,13 @@
         .daily-total-badge {
             background: var(--primary-morandi-light);
             color: var(--accent-dark);
-            padding: 5px 16px;
-            border-radius: 18px;
-            font-size: 0.9rem;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.92rem;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
@@ -384,25 +384,38 @@
         .daily-con-row {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
+            gap: 14px;
             background: #FDFBFB;
-            padding: 8px 12px;
+            padding: 9px 12px;
             border-radius: 8px;
             border: 1px solid #F3EDED;
         }
 
-        .con-name-badge {
+        /* 人員名稱與多數據跳行排列結構 */
+        .con-info-column {
             flex-shrink: 0;
-            font-size: 0.88rem;
-            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 250px;
+        }
+
+        .con-name-top {
+            font-size: 0.92rem;
+            font-weight: 700;
             color: var(--accent-dark);
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding-top: 3px;
+            gap: 6px;
+        }
+
+        .con-stats-line {
+            font-size: 0.82rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
             flex-wrap: wrap;
-            max-width: 380px;
-            line-height: 1.4;
         }
 
         .customer-tags-flow {
@@ -411,6 +424,7 @@
             flex-wrap: wrap;
             align-items: center;
             gap: 6px;
+            padding-top: 2px;
         }
 
         .all-canceled-note {
@@ -422,7 +436,7 @@
             margin-right: 4px;
         }
 
-        /* 正常顧客按鈕標籤 */
+        /* 顧客按鈕標籤 */
         .customer-btn {
             background: white;
             border: 1px solid var(--secondary-morandi);
@@ -444,15 +458,14 @@
             border-color: var(--primary-morandi);
         }
 
-        /* 已完成服務 (到店) 的打勾圖示 */
         .icon-completed {
-            color: #2E7D32;
-            font-weight: bold;
-            font-size: 0.88rem;
+            color: var(--color-arrived);
+            font-weight: 800;
+            font-size: 0.9rem;
         }
 
         .customer-btn:hover .icon-completed {
-            color: #A5D6A7;
+            color: #A7F3D0;
         }
 
         /* 取消顧客標籤 */
@@ -590,11 +603,11 @@
         <div class="overview-header">
             <div class="overview-title-group">
                 <div class="overview-title">
-                    <span>🎗️</span> 所有諮詢人員表現總覽
+                    <span>🎗️️</span> 所有諮詢人員表現總覽
                 </div>
-                <!-- 格式：總預約 XX (實際預約XX+取消預約X) 實際到店XX -->
+                <!-- 格式：總預約 XX (實際預約 XX + 取消預約 X) 實際到店 XX 到店率: XX% -->
                 <div class="range-overall-badge" id="rangeSummaryBadge">
-                    總預約 0 (實際預約 0 + 取消預約 0) 實際到店 0
+                    總預約 0 (實際預約 0 + 取消預約 0) 實際到店 0 到店率: 0%
                 </div>
             </div>
 
@@ -643,6 +656,12 @@
     let allAppointments = []; 
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 到店率計算函式：四捨五入到整數 %
+    function calculateRate(arrived, total) {
+        if (!total || total <= 0) return '0%';
+        return Math.round((arrived / total) * 100) + '%';
+    }
 
     function parseRows(rawRows) {
         const rows = [];
@@ -739,12 +758,14 @@
             }
         });
 
-        // 頂部全區間總覽：總預約 XX (實際預約XX+取消預約X) 實際到店XX
+        // 頂部全區間總覽標籤
         const totalRangeAll = totalRangeValid + totalRangeCancel;
+        const totalRangeRate = calculateRate(totalRangeArrived, totalRangeAll);
         document.getElementById('rangeSummaryBadge').innerHTML = `
             總預約 ${totalRangeAll} 
-            (<span class="highlight-actual">實際預約 ${totalRangeValid}</span> + <span class="highlight-cancel">取消預約 ${totalRangeCancel}</span>) 
-            <span class="highlight-arrived">實際到店 ${totalRangeArrived}</span>
+            (<span class="val-actual">實際預約 ${totalRangeValid}</span> + <span class="val-cancel">取消預約 ${totalRangeCancel}</span>) 
+            <span class="val-arrived">實際到店 ${totalRangeArrived}</span> 
+            <span class="val-rate">到店率: ${totalRangeRate}</span>
         `;
 
         // 2. 人員區間表現統計
@@ -772,7 +793,7 @@
             }
         });
 
-        // 逐日評定冠軍與達標 (依實際預約計算)
+        // 逐日評定冠軍與達標
         Object.keys(dailyMap).forEach(d => {
             const dayObj = dailyMap[d];
             let maxCount = -1;
@@ -808,7 +829,7 @@
         renderDailySection(sortedDates.map(d => dailyMap[d]));
     }
 
-    // 渲染總覽卡片
+    // 渲染總覽卡片：分行獨立呈現，避免長度卡住，提高易讀性
     function renderOverviewGrid(list) {
         const grid = document.getElementById('consultantOverviewGrid');
         grid.innerHTML = '';
@@ -820,18 +841,26 @@
 
         list.forEach(c => {
             const totalAppointments = c.totalValid + c.totalCancel;
+            const rate = calculateRate(c.totalArrived, totalAppointments);
             const card = document.createElement('div');
             card.className = 'consultant-card';
             card.innerHTML = `
                 <div class="card-person-name">
                     <span>👤</span> ${c.name}
                 </div>
-                <div class="card-booking-badge">
-                    <div>總預約數 ${totalAppointments}</div>
-                    <span class="card-booking-sub">
-                        (<span class="highlight-actual">實際預約 ${c.totalValid}</span>+<span class="highlight-cancel">取消預約 ${c.totalCancel}</span>) 
-                        <span class="highlight-arrived">實際到店 ${c.totalArrived}</span>
-                    </span>
+                <div class="card-booking-box">
+                    <div class="card-booking-header">
+                        總預約數 ${totalAppointments}
+                    </div>
+                    <div class="card-booking-body">
+                        <div class="card-stat-line">
+                            (<span class="val-actual">實際預約 ${c.totalValid}</span> + <span class="val-cancel">取消預約 ${c.totalCancel}</span>)
+                        </div>
+                        <div class="card-stat-line">
+                            <span class="val-arrived">實際到店 ${c.totalArrived}</span>
+                            <span class="val-rate">到店率: ${rate}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-stats-list">
                     <div class="stat-item">
@@ -856,7 +885,7 @@
         });
     }
 
-    // 渲染每日細項
+    // 渲染每日細項：分行清晰呈現
     function renderDailySection(dayList) {
         const container = document.getElementById('dailyListContainer');
         container.innerHTML = '';
@@ -869,6 +898,7 @@
         dayList.forEach(day => {
             const isToday = (day.date === todayStr);
             const totalDayAppointments = day.validCount + day.cancelCount;
+            const dayRate = calculateRate(day.arrivedCount, totalDayAppointments);
             const card = document.createElement('div');
             card.className = `daily-card ${isToday ? 'today-card' : ''}`;
             card.id = 'date-' + day.date;
@@ -878,9 +908,10 @@
 
             sortedCons.forEach(con => {
                 const conTotal = con.validCount + con.cancelCount;
+                const conRate = calculateRate(con.arrivedCount, conTotal);
                 let tagsHtml = '';
 
-                // 全數取消時的文字提醒
+                // 當日全數取消文字提醒
                 if (con.validCount === 0 && con.cancelCount > 0) {
                     tagsHtml += `<span class="all-canceled-note">（當日預約均已取消）</span>`;
                 }
@@ -900,10 +931,15 @@
 
                 conRowsHtml += `
                     <div class="daily-con-row">
-                        <div class="con-name-badge">
-                            <span>✦</span> ${con.name}：${conTotal} 
-                            (<span class="highlight-actual">實際預約 ${con.validCount}</span>+<span class="highlight-cancel">取消預約 ${con.cancelCount}</span>) 
-                            <span class="highlight-arrived">實際到店 ${con.arrivedCount}</span>
+                        <div class="con-info-column">
+                            <div class="con-name-top">
+                                <span>✦</span> ${con.name}：總預約 ${conTotal}
+                            </div>
+                            <div class="con-stats-line">
+                                (<span class="val-actual">實際預約 ${con.validCount}</span> + <span class="val-cancel">取消預約 ${con.cancelCount}</span>)
+                                <span class="val-arrived">實際到店 ${con.arrivedCount}</span>
+                                <span class="val-rate">到店率: ${conRate}</span>
+                            </div>
                         </div>
                         <div class="customer-tags-flow">
                             ${tagsHtml}
@@ -920,8 +956,9 @@
                     </div>
                     <div class="daily-total-badge">
                         總預約 ${totalDayAppointments} 
-                        (<span class="highlight-actual">實際預約 ${day.validCount}</span> + <span class="highlight-cancel">取消預約 ${day.cancelCount}</span>) 
-                        <span class="highlight-arrived">實際到店 ${day.arrivedCount}</span>
+                        (<span class="val-actual">實際預約 ${day.validCount}</span> + <span class="val-cancel">取消預約 ${day.cancelCount}</span>) 
+                        <span class="val-arrived">實際到店 ${day.arrivedCount}</span>
+                        <span class="val-rate">到店率: ${dayRate}</span>
                     </div>
                 </div>
                 <div class="daily-consultants-list">
@@ -949,8 +986,8 @@
             <div class="detail-row"><div class="detail-col-label">客戶姓名 (C)</div><div class="detail-col-val">${cust.C || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">客戶編號 (A)</div><div class="detail-col-val">${cust.A || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">客戶電話 (B)</div><div class="detail-col-val">${cust.B || '-'}</div></div>
-            <div class="detail-row"><div class="detail-col-label">預約狀況 (G)</div><div class="detail-col-val"><span style="color:${isCanceled ? '#C62828' : '#2E7D32'}; font-weight:700;">${cust.G || '-'}</span></div></div>
-            <div class="detail-row"><div class="detail-col-label">服務狀態 (H)</div><div class="detail-col-val"><span style="color:${cust.isCompleted ? '#2E7D32' : '#634343'}; font-weight:600;">${cust.isCompleted ? '✓ ' : ''}${cust.H || '-'}</span></div></div>
+            <div class="detail-row"><div class="detail-col-label">預約狀況 (G)</div><div class="detail-col-val"><span style="color:${isCanceled ? '#C62828' : '#15803D'}; font-weight:700;">${cust.G || '-'}</span></div></div>
+            <div class="detail-row"><div class="detail-col-label">服務狀態 (H)</div><div class="detail-col-val"><span style="color:${cust.isCompleted ? '#15803D' : '#634343'}; font-weight:700;">${cust.isCompleted ? '✓ ' : ''}${cust.H || '-'}</span></div></div>
             <div class="detail-row"><div class="detail-col-label">預約時間 (J)</div><div class="detail-col-val">${cust.J || '-'}</div></div>
             <div class="detail-row"><div class="detail-col-label">協助人員 (M)</div><div class="detail-col-val">${cust.M || '無'}</div></div>
             <div class="detail-row"><div class="detail-col-label">預約醫師 (N)</div><div class="detail-col-val">${cust.N || '無'}</div></div>

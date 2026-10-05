@@ -3,277 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>諮詢師預約數字分析面板</title>
-    <!-- 引入 Excel 解析庫 -->
+    <title>諮詢人員表現總覽與每日預約分析</title>
+    <!-- SheetJS 用於解析 Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --bg-color: #F8F4F4;
-            --primary-morandi: #A86D6D;
-            --secondary-morandi: #D4A5A5;
-            --light-pink: #F3E4E4;
-            --accent-dark: #6E4A4A;
-            --cancel-color: #9E7D7D;
-            --cancel-bg: #EFE6E6;
-            --text-main: #4A3E3E;
+            --bg-color: #F8F3F3;
             --card-bg: #FFFFFF;
-            --shadow: 0 4px 16px rgba(110, 74, 74, 0.08);
+            --primary-morandi: #9D6B6B;
+            --primary-morandi-light: #F2E6E6;
+            --secondary-morandi: #C89F9F;
+            --accent-dark: #634343;
+            --text-dark: #4A3A3A;
+            --text-muted: #8C7B7B;
+            --border-color: #EADCDC;
+            --cancel-color: #9C7878;
+            --cancel-bg: #F4ECEC;
+            --badge-good: #DE5347;
+            --badge-target: #3CA577;
+            --badge-low: #E28834;
+            --badge-champion: #D4A017;
+            --shadow: 0 4px 12px rgba(99, 67, 67, 0.06);
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 24px 16px;
+            color: var(--text-dark);
+            padding: 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        header {
+        .main-wrapper {
             width: 100%;
-            max-width: 960px;
-            text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--secondary-morandi);
+            max-width: 1280px;
         }
 
-        h1 {
-            color: var(--accent-dark);
-            margin: 0 0 8px 0;
-            font-size: 1.8rem;
-            letter-spacing: 1px;
-        }
-
-        .header-desc {
-            color: var(--cancel-color);
-            font-size: 0.95rem;
-            margin: 0 0 15px 0;
-        }
-
-        /* 檔案上傳與總計列 */
-        .toolbar {
+        /* 頂部操作列 */
+        .top-action-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 12px;
+            margin-bottom: 20px;
             background: white;
-            padding: 14px 20px;
+            padding: 12px 20px;
             border-radius: 12px;
             box-shadow: var(--shadow);
-            margin-bottom: 25px;
-            width: 100%;
-            max-width: 960px;
+            border: 1px solid var(--border-color);
         }
 
         .upload-btn {
             background-color: var(--secondary-morandi);
             color: white;
-            padding: 8px 16px;
+            padding: 8px 18px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 0.9rem;
-            transition: all 0.2s;
+            transition: 0.2s;
             display: inline-flex;
             align-items: center;
             gap: 6px;
         }
 
-        .upload-btn:hover {
-            background-color: var(--primary-morandi);
-        }
+        .upload-btn:hover { background-color: var(--primary-morandi); }
+        #excelFileInput { display: none; }
 
-        #fileInput { display: none; }
-
-        .month-summary {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--accent-dark);
-        }
-
-        .month-summary .cancel-tag {
-            color: var(--cancel-color);
-            font-weight: normal;
-            font-size: 0.9rem;
-            margin-left: 6px;
-        }
-
-        /* 主要日曆列表容器 */
-        .container {
-            width: 100%;
-            max-width: 960px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        /* 每日區塊 */
-        .date-block {
-            background: var(--card-bg);
+        /* 表現總覽卡片外框 */
+        .overview-section {
+            background: white;
             border-radius: 16px;
-            padding: 22px;
+            padding: 24px;
             box-shadow: var(--shadow);
-            border-left: 6px solid var(--primary-morandi);
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
         }
 
-        .date-block:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(110, 74, 74, 0.12);
-        }
-
-        /* 當天高亮標記 */
-        .today-card {
-            border: 2px solid var(--primary-morandi);
-            border-left: 8px solid var(--accent-dark);
-            background: #FFFDFD;
-        }
-
-        .today-badge {
-            background: var(--accent-dark);
-            color: white;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 6px;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-
-        .date-header {
+        .overview-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px dashed var(--secondary-morandi);
-            padding-bottom: 12px;
-            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .date-title {
+        .overview-title {
             font-size: 1.35rem;
             font-weight: 700;
             color: var(--accent-dark);
             display: flex;
             align-items: center;
+            gap: 8px;
         }
 
-        .total-badge {
-            background: var(--light-pink);
-            color: var(--accent-dark);
+        /* 日期區間過濾列 */
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        .filter-group input[type="date"] {
+            padding: 5px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            color: var(--text-dark);
+            background: #FAFAFA;
+            outline: none;
+        }
+
+        .btn-filter {
+            background-color: var(--primary-morandi);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: 0.2s;
+        }
+
+        .btn-filter:hover { background-color: var(--accent-dark); }
+
+        .btn-clear {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
             padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.95rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: 0.2s;
+        }
+
+        .btn-clear:hover { background-color: #F0ECEC; }
+
+        /* 人員總覽格狀卡片 */
+        .consultant-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+            gap: 16px;
+        }
+
+        .consultant-card {
+            background: #FFFFFF;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .consultant-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(157, 107, 107, 0.15);
+            border-color: var(--secondary-morandi);
+        }
+
+        .card-person-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent-dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-booking-badge {
+            background-color: var(--primary-morandi);
+            color: white;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 5px 14px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .card-stats-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            font-size: 0.83rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 4px;
+        }
+
+        .stat-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-dark);
+        }
+
+        .stat-val {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* 下方每日明細區塊 - 優化緊湊排版 */
+        .daily-section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .daily-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .daily-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-morandi);
+        }
+
+        .daily-card.today-card {
+            border-left: 6px solid var(--accent-dark);
+            background: #FFFAF9;
+            box-shadow: 0 4px 16px rgba(157, 107, 107, 0.12);
+        }
+
+        .daily-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--border-color);
+            margin-bottom: 12px;
+        }
+
+        .daily-date {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .today-pill {
+            background: var(--accent-dark);
+            color: white;
+            font-size: 0.72rem;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .daily-total-badge {
+            background: var(--primary-morandi-light);
+            color: var(--accent-dark);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.88rem;
             font-weight: 600;
         }
 
-        .total-badge .cancel-num {
+        .cancel-span {
             color: var(--cancel-color);
-            font-size: 0.85rem;
             font-weight: normal;
-            margin-left: 5px;
+            font-size: 0.82rem;
+            margin-left: 4px;
         }
 
-        /* 諮詢師區塊 */
-        .consultant-row {
-            margin-bottom: 16px;
-            background: #FAFAFA;
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid #F0E8E8;
+        /* 每日名單緊密排版 */
+        .daily-consultants-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .consultant-row:last-child {
-            margin-bottom: 0;
+        .daily-con-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #FDFBFB;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #F3EDED;
         }
 
-        .consultant-name-bar {
-            font-size: 1rem;
-            font-weight: bold;
+        .con-name-badge {
+            flex-shrink: 0;
+            min-width: 140px;
+            font-size: 0.9rem;
+            font-weight: 600;
             color: var(--accent-dark);
-            margin-bottom: 10px;
             display: flex;
             align-items: center;
+            gap: 6px;
+            padding-top: 2px;
         }
 
-        .consultant-name-bar::before {
-            content: "✦";
-            color: var(--primary-morandi);
-            margin-right: 8px;
-            font-size: 0.9rem;
-        }
-
-        .consultant-cancel-tag {
-            color: var(--cancel-color);
-            font-size: 0.85rem;
-            font-weight: normal;
-            margin-left: 6px;
+        .con-cancel-pill {
             background: var(--cancel-bg);
-            padding: 2px 8px;
-            border-radius: 12px;
+            color: var(--cancel-color);
+            font-size: 0.76rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: normal;
         }
 
-        .customer-tags {
+        .customer-tags-flow {
+            flex: 1;
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
         }
 
         .customer-btn {
             background: white;
             border: 1px solid var(--secondary-morandi);
-            padding: 6px 14px;
-            border-radius: 20px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            color: var(--text-dark);
             cursor: pointer;
-            font-size: 0.88rem;
-            color: var(--text-main);
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
 
         .customer-btn:hover {
             background: var(--primary-morandi);
             color: white;
             border-color: var(--primary-morandi);
-            transform: translateY(-1px);
         }
 
-        /* Modal 彈窗 */
+        /* 浮動置頂按鈕 */
+        .fab-scroll-top {
+            position: fixed;
+            right: 28px;
+            bottom: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--primary-morandi);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            transition: transform 0.2s, background-color 0.2s;
+            z-index: 99;
+        }
+
+        .fab-scroll-top:hover {
+            transform: scale(1.08);
+            background-color: var(--accent-dark);
+        }
+
+        /* 彈出視窗 Modal */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(40, 25, 25, 0.45);
-            backdrop-filter: blur(4px);
+            background: rgba(35, 20, 20, 0.45);
+            backdrop-filter: blur(3px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
 
-        .modal-content {
+        .modal-box {
             background: white;
             width: 90%;
-            max-width: 520px;
-            border-radius: 16px;
-            box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+            max-width: 500px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             overflow: hidden;
-            animation: modalFadeIn 0.25s ease-out;
+            animation: popUp 0.2s ease-out;
         }
 
-        @keyframes modalFadeIn {
-            from { transform: translateY(15px); opacity: 0; }
+        @keyframes popUp {
+            from { transform: translateY(12px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
             background: var(--primary-morandi);
             color: white;
-            padding: 16px 22px;
-            font-size: 1.15rem;
+            padding: 14px 20px;
+            font-size: 1.1rem;
             font-weight: 600;
             display: flex;
             justify-content: space-between;
@@ -282,293 +430,429 @@
 
         .close-btn {
             cursor: pointer;
-            font-size: 1.6rem;
+            font-size: 1.5rem;
             line-height: 1;
-            transition: transform 0.2s;
         }
 
-        .close-btn:hover { transform: scale(1.15); }
-
         .modal-body {
-            padding: 20px 24px;
+            padding: 18px 22px;
             max-height: 75vh;
             overflow-y: auto;
         }
 
-        .detail-item {
+        .detail-row {
             display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #F5ECEC;
-            font-size: 0.92rem;
-            line-height: 1.45;
+            padding: 8px 0;
+            border-bottom: 1px solid #F6EFEF;
+            font-size: 0.9rem;
+            line-height: 1.4;
         }
 
-        .detail-item:last-child { border-bottom: none; }
+        .detail-row:last-child { border-bottom: none; }
 
-        .detail-label {
-            width: 100px;
+        .detail-col-label {
+            width: 105px;
             flex-shrink: 0;
             color: var(--accent-dark);
             font-weight: 600;
         }
 
-        .detail-value {
+        .detail-col-val {
             flex: 1;
-            color: var(--text-main);
+            color: var(--text-dark);
             word-break: break-all;
         }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>諮詢師預約營運分析面板</h1>
-    <p class="header-desc">莫蘭迪粉紅風格 ｜ 每日諮詢預約量與取消數監控</p>
-</header>
+<div class="main-wrapper">
+    <!-- 頂端操作資訊列 -->
+    <div class="top-action-bar">
+        <label class="upload-btn">
+            📂 上傳 / 切換 Excel 檔案
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv">
+        </label>
+        <div id="fileStatusText" style="font-size:0.9rem; color:var(--text-muted);">
+            正在讀取預約資料...
+        </div>
+    </div>
 
-<div class="toolbar">
-    <label class="upload-btn">
-        📁 匯入 / 切換 Excel 報表
-        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
-    </label>
-    <div class="month-summary" id="overallSummary">
-        總預約：計算中...
+    <!-- 上方：所有諮詢人員表現總覽 (依附圖風格刻劃) -->
+    <section class="overview-section">
+        <div class="overview-header">
+            <div class="overview-title">
+                <span>🎗️</span> 所有諮詢人員表現總覽
+            </div>
+            <div class="filter-group">
+                <span>📅 日期區間：</span>
+                <input type="date" id="filterStartDate">
+                <span>至</span>
+                <input type="date" id="filterEndDate">
+                <button class="btn-filter" onclick="applyDateFilter()">套用</button>
+                <button class="btn-clear" onclick="resetDateFilter()">清除</button>
+            </div>
+        </div>
+
+        <div class="consultant-grid" id="consultantOverviewGrid">
+            <!-- 動態生成諮詢師表現卡片 -->
+        </div>
+    </section>
+
+    <!-- 下方：每日預約細項清單 (緊湊排版) -->
+    <div class="daily-section-title">
+        <span>📋</span> 每日預約名單與細項分析
+    </div>
+
+    <div class="daily-container" id="dailyListContainer">
+        <!-- 動態生成每日列表區塊 -->
     </div>
 </div>
 
-<div class="container" id="dataContainer">
-    <!-- 日期區塊由 JavaScript 動態生成 -->
-</div>
+<!-- 浮動置頂箭頭按鈕 -->
+<button class="fab-scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="回頂部">↑</button>
 
-<!-- 詳細資料彈跳視窗 -->
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal-content">
+<!-- 顧客詳情彈跳視窗 (欄位 A, B, C, G, J, M, N, O, P) -->
+<div class="modal-overlay" id="customerModal">
+    <div class="modal-box">
         <div class="modal-header">
-            <span id="modalTitle">客戶預約詳細資訊</span>
+            <span id="modalCustomerName">顧客預約詳情</span>
             <span class="close-btn" onclick="closeModal()">×</span>
         </div>
-        <div class="modal-body" id="modalBody">
-            <!-- 欄位 A, B, C, G, J, M, N, O, P -->
+        <div class="modal-body" id="modalCustomerDetails">
+            <!-- 彈窗內容 -->
         </div>
     </div>
 </div>
 
 <script>
-    // 預設資料存放處（支援動態匯入與初始載入）
-    let currentData = [];
+    // 全域變數
+    let allAppointments = []; // 原始所有列資料
+    const todayStr = "2026-03-16"; // 當前系統時間（可配合今天）
 
-    // 格式化今日日期字串 (YYYY-MM-DD)
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    // 格式化解析每列資料
+    function parseRows(rawRows) {
+        const rows = [];
+        rawRows.forEach(r => {
+            const date = (r['預約日期'] || r['I'] || '').toString().trim();
+            const consultant = (r['預約諮詢師'] || r['L'] || '未指定諮詢師').toString().trim();
+            const status = (r['預約狀況'] || r['G'] || '').toString().trim();
 
-    // 渲染面板主邏輯
-    function renderDashboard(dataList) {
-        const container = document.getElementById('dataContainer');
-        container.innerHTML = '';
-
-        let allValid = 0;
-        let allCancel = 0;
-
-        if (!dataList || dataList.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:40px; color:#888;">暫無預約資料</div>';
-            document.getElementById('overallSummary').innerHTML = '總預約：0 <span class="cancel-tag">(取消 0)</span>';
-            return;
-        }
-
-        dataList.forEach(day => {
-            allValid += day.validCount;
-            allCancel += day.cancelCount;
-
-            const isToday = (day.date === todayStr);
-            const block = document.createElement('div');
-            block.className = `date-block ${isToday ? 'today-card' : ''}`;
-            block.id = 'date-' + day.date;
-
-            let consultantsHtml = '';
-            day.consultants.forEach(con => {
-                let customersHtml = '';
-                con.customers.forEach(cust => {
-                    const custJson = JSON.stringify(cust).replace(/"/g, '&quot;');
-                    customersHtml += `<button class="customer-btn" onclick="showDetails(${custJson})">${cust.C || '顧客'}</button>`;
-                });
-
-                if (con.customers.length === 0) {
-                    customersHtml = '<span style="font-size:0.85rem; color:#A09090;">（該日均已取消）</span>';
-                }
-
-                consultantsHtml += `
-                    <div class="consultant-row">
-                        <div class="consultant-name-bar">
-                            ${con.name}：${con.validCount} 位
-                            <span class="consultant-cancel-tag">(取消 ${con.cancelCount})</span>
-                        </div>
-                        <div class="customer-tags">${customersHtml}</div>
-                    </div>
-                `;
-            });
-
-            block.innerHTML = `
-                <div class="date-header">
-                    <div class="date-title">
-                        ${day.date}
-                        ${isToday ? '<span class="today-badge">今日</span>' : ''}
-                    </div>
-                    <div class="total-badge">
-                        總預約：${day.validCount}
-                        <span class="cancel-num">(取消 ${day.cancelCount})</span>
-                    </div>
-                </div>
-                ${consultantsHtml}
-            `;
-            container.appendChild(block);
-        });
-
-        // 更新頂部總計
-        document.getElementById('overallSummary').innerHTML = `
-            全期預約總計：${allValid} 位 
-            <span class="cancel-tag">(取消 ${allCancel})</span>
-        `;
-
-        // 自動平滑捲動到當天 (若當天無排程，則捲動到最近的日期)
-        setTimeout(() => {
-            const todayElem = document.getElementById('date-' + todayStr);
-            if (todayElem) {
-                todayElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else if (dataList.length > 0) {
-                // 若當天不在範圍內，找到第一個大於等於當天的日期
-                const nextDay = dataList.find(d => d.date >= todayStr);
-                const targetId = nextDay ? 'date-' + nextDay.date : 'date-' + dataList[0].date;
-                const targetElem = document.getElementById(targetId);
-                if (targetElem) {
-                    targetElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-        }, 300);
-    }
-
-    // 顯示詳細資料彈窗 (呈現 A, B, C, G, J, M, N, O, P)
-    function showDetails(cust) {
-        document.getElementById('modalTitle').innerText = `${cust.C || '顧客'} - 預約詳情`;
-        const modalBody = document.getElementById('modalBody');
-        
-        modalBody.innerHTML = `
-            <div class="detail-item"><div class="detail-label">客戶姓名 (C)</div><div class="detail-value">${cust.C || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">客戶編號 (A)</div><div class="detail-value">${cust.A || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">客戶電話 (B)</div><div class="detail-value">${cust.B || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">預約狀況 (G)</div><div class="detail-value"><span style="color:#B85050; font-weight:600;">${cust.G || '-'}</span></div></div>
-            <div class="detail-item"><div class="detail-label">預約時間 (J)</div><div class="detail-value">${cust.J || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">協助人員 (M)</div><div class="detail-value">${cust.M || '無'}</div></div>
-            <div class="detail-item"><div class="detail-label">預約醫師 (N)</div><div class="detail-value">${cust.N || '無'}</div></div>
-            <div class="detail-item"><div class="detail-label">預約療程 (O)</div><div class="detail-value">${cust.O || '無'}</div></div>
-            <div class="detail-item"><div class="detail-label">備  註 (P)</div><div class="detail-value">${cust.P || '無'}</div></div>
-        `;
-        document.getElementById('modalOverlay').style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modalOverlay').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-        if (event.target === document.getElementById('modalOverlay')) {
-            closeModal();
-        }
-    };
-
-    // 解析 Excel/CSV 檔案並依規則計算
-    function processExcelData(rawRows) {
-        const dateMap = {};
-
-        rawRows.forEach(row => {
-            // 對應欄位 (依原表順序)
-            // A:客戶編號, B:客戶電話, C:客戶姓名, G:預約狀況, I:預約日期, J:預約時間, L:預約諮詢師, M:協助人員, N:預約醫師, O:預約療程, P:備註
-            const date = (row['預約日期'] || row['I'] || '').toString().trim();
-            const consultant = (row['預約諮詢師'] || row['L'] || '未指定諮詢師').toString().trim();
-            const status = (row['預約狀況'] || row['G'] || '').toString().trim();
-
-            if (!date || date === '預約日期') return; // 過濾表頭或空列
+            if (!date || date === '預約日期') return;
 
             const isCanceled = status.includes('取消');
 
-            if (!dateMap[date]) {
-                dateMap[date] = {
-                    date: date,
+            rows.push({
+                date: date,
+                consultant: consultant,
+                status: status,
+                isCanceled: isCanceled,
+                A: r['客戶編號'] || r['A'] || '',
+                B: r['客戶電話'] || r['B'] || '',
+                C: r['客戶姓名'] || r['C'] || '',
+                G: status,
+                J: r['預約時間'] || r['J'] || '',
+                M: r['協助人員'] || r['M'] || '',
+                N: r['預約醫師'] || r['N'] || '',
+                O: r['預約療程'] || r['O'] || '',
+                P: r['備註'] || r['P'] || ''
+            });
+        });
+        return rows;
+    }
+
+    // 依篩選區間計算並渲染總覽卡片與每日明細
+    function updateDashboard(startDate = null, endDate = null) {
+        // 篩選區間
+        const filteredRows = allAppointments.filter(item => {
+            if (startDate && item.date < startDate) return false;
+            if (endDate && item.date > endDate) return false;
+            return true;
+        });
+
+        // 1. 每日聚合整理
+        const dailyMap = {};
+        filteredRows.forEach(row => {
+            if (!dailyMap[row.date]) {
+                dailyMap[row.date] = {
+                    date: row.date,
                     validCount: 0,
                     cancelCount: 0,
                     consultants: {}
                 };
             }
-
-            if (isCanceled) {
-                dateMap[date].cancelCount += 1;
+            if (row.isCanceled) {
+                dailyMap[row.date].cancelCount++;
             } else {
-                dateMap[date].validCount += 1;
+                dailyMap[row.date].validCount++;
             }
 
-            if (!dateMap[date].consultants[consultant]) {
-                dateMap[date].consultants[consultant] = {
-                    name: consultant,
+            if (!dailyMap[row.date].consultants[row.consultant]) {
+                dailyMap[row.date].consultants[row.consultant] = {
+                    name: row.consultant,
                     validCount: 0,
                     cancelCount: 0,
                     customers: []
                 };
             }
 
-            if (isCanceled) {
-                dateMap[date].consultants[consultant].cancelCount += 1;
+            if (row.isCanceled) {
+                dailyMap[row.date].consultants[row.consultant].cancelCount++;
             } else {
-                dateMap[date].consultants[consultant].validCount += 1;
-                dateMap[date].consultants[consultant].customers.push({
-                    A: row['客戶編號'] || row['A'] || '',
-                    B: row['客戶電話'] || row['B'] || '',
-                    C: row['客戶姓名'] || row['C'] || '',
-                    G: status,
-                    J: row['預約時間'] || row['J'] || '',
-                    M: row['協助人員'] || row['M'] || '',
-                    N: row['預約醫師'] || row['N'] || '',
-                    O: row['預約療程'] || row['O'] || '',
-                    P: row['備註'] || row['P'] || ''
-                });
+                dailyMap[row.date].consultants[row.consultant].validCount++;
+                dailyMap[row.date].consultants[row.consultant].customers.push(row);
             }
         });
 
-        // 轉換為排序好的陣列
-        const sortedDates = Object.keys(dateMap).sort();
-        return sortedDates.map(d => {
-            const dayObj = dateMap[d];
-            const sortedConsultants = Object.values(dayObj.consultants).sort((a, b) => b.validCount - a.validCount);
-            return {
-                date: dayObj.date,
-                validCount: dayObj.validCount,
-                cancelCount: dayObj.cancelCount,
-                consultants: sortedConsultants
-            };
+        // 2. 計算每位諮詢師在該區間內的表現統計（冠軍、優良、達標、不足）
+        const statsByConsultant = {};
+        
+        // 找出所有出現過的諮詢師
+        filteredRows.forEach(r => {
+            if (!statsByConsultant[r.consultant]) {
+                statsByConsultant[r.consultant] = {
+                    name: r.consultant,
+                    totalValid: 0,
+                    totalCancel: 0,
+                    championCount: 0,
+                    goodCount: 0,     // >= 6
+                    targetCount: 0,   // 4-5
+                    lowCount: 0       // < 4
+                };
+            }
+            if (r.isCanceled) {
+                statsByConsultant[r.consultant].totalCancel++;
+            } else {
+                statsByConsultant[r.consultant].totalValid++;
+            }
+        });
+
+        // 逐日評定每一天的表現與冠軍
+        Object.keys(dailyMap).forEach(d => {
+            const dayObj = dailyMap[d];
+            let maxCount = -1;
+            const conList = Object.values(dayObj.consultants);
+
+            // 找當日冠軍最大值
+            conList.forEach(c => {
+                if (c.validCount > maxCount) maxCount = c.validCount;
+            });
+
+            conList.forEach(c => {
+                const stat = statsByConsultant[c.name];
+                if (!stat) return;
+
+                // 只有預約數大於 0 且等於最高者才算當日冠軍
+                if (maxCount > 0 && c.validCount === maxCount) {
+                    stat.championCount++;
+                }
+
+                // 評級判定 (優良 >=6, 達標 4-5, 不足 <4)
+                if (c.validCount >= 6) {
+                    stat.goodCount++;
+                } else if (c.validCount >= 4) {
+                    stat.targetCount++;
+                } else {
+                    stat.lowCount++;
+                }
+            });
+        });
+
+        // 渲染上方總覽卡片 (依總預約人數由大到小排序)
+        renderOverviewGrid(Object.values(statsByConsultant).sort((a, b) => b.totalValid - a.totalValid));
+
+        // 渲染下方每日清單 (依日期由小到大排序)
+        const sortedDates = Object.keys(dailyMap).sort();
+        renderDailySection(sortedDates.map(d => dailyMap[d]));
+    }
+
+    // 渲染總覽卡片格
+    function renderOverviewGrid(list) {
+        const grid = document.getElementById('consultantOverviewGrid');
+        grid.innerHTML = '';
+
+        if (list.length === 0) {
+            grid.innerHTML = '<div style="color:var(--text-muted); padding:20px; grid-column:1/-1;">選取區間內無預約資料</div>';
+            return;
+        }
+
+        list.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'consultant-card';
+            card.innerHTML = `
+                <div class="card-person-name">
+                    <span>👤</span> ${c.name}
+                </div>
+                <div class="card-booking-badge">
+                    總預約 : ${c.totalValid} 位 ${c.totalCancel > 0 ? `<span style="font-weight:normal;opacity:0.9;">(取消${c.totalCancel})</span>` : ''}
+                </div>
+                <div class="card-stats-list">
+                    <div class="stat-item">
+                        <span class="stat-label"><span style="color:var(--badge-champion)">👑</span> 冠軍</span>
+                        <span class="stat-val">${c.championCount} 次</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label"><span style="color:var(--badge-good)">🔥</span> 優良 <span style="font-size:0.75rem;color:#999;">(≥6)</span></span>
+                        <span class="stat-val">${c.goodCount} 次</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label"><span style="color:var(--badge-target)">🟢</span> 達標 <span style="font-size:0.75rem;color:#999;">(4-5)</span></span>
+                        <span class="stat-val">${c.targetCount} 次</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label"><span style="color:var(--badge-low)">⚠️</span> 不足 <span style="font-size:0.75rem;color:#999;">(&lt;4)</span></span>
+                        <span class="stat-val">${c.lowCount} 次</span>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
         });
     }
 
-    // 檔案上傳事件監聽
-    document.getElementById('fileInput').addEventListener('change', function(e) {
+    // 渲染每日細項 (緊湊排版)
+    function renderDailySection(dayList) {
+        const container = document.getElementById('dailyListContainer');
+        container.innerHTML = '';
+
+        if (dayList.length === 0) {
+            container.innerHTML = '<div style="background:white; padding:30px; text-align:center; border-radius:12px; color:#999;">此區間無每日預約細項</div>';
+            return;
+        }
+
+        dayList.forEach(day => {
+            const isToday = (day.date === todayStr);
+            const card = document.createElement('div');
+            card.className = `daily-card ${isToday ? 'today-card' : ''}`;
+            card.id = 'date-' + day.date;
+
+            // 諮詢師清單 (依預約人數由多到少)
+            const sortedCons = Object.values(day.consultants).sort((a, b) => b.validCount - a.validCount);
+            let conRowsHtml = '';
+
+            sortedCons.forEach(con => {
+                let tagsHtml = '';
+                con.customers.forEach(cust => {
+                    const jsonStr = JSON.stringify(cust).replace(/"/g, '&quot;');
+                    tagsHtml += `<button class="customer-btn" onclick="showCustomerModal(${jsonStr})">${cust.C || '顧客'}</button>`;
+                });
+
+                if (con.customers.length === 0) {
+                    tagsHtml = '<span style="font-size:0.8rem; color:#A89E9E;">（當日均已取消）</span>';
+                }
+
+                conRowsHtml += `
+                    <div class="daily-con-row">
+                        <div class="con-name-badge">
+                            <span>✦</span> ${con.name}：${con.validCount} 位
+                            <span class="con-cancel-pill">(取消 ${con.cancelCount})</span>
+                        </div>
+                        <div class="customer-tags-flow">
+                            ${tagsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            card.innerHTML = `
+                <div class="daily-header">
+                    <div class="daily-date">
+                        ${day.date}
+                        ${isToday ? '<span class="today-pill">今日</span>' : ''}
+                    </div>
+                    <div class="daily-total-badge">
+                        總預約：${day.validCount} 位
+                        <span class="cancel-span">(取消 ${day.cancelCount})</span>
+                    </div>
+                </div>
+                <div class="daily-consultants-list">
+                    ${conRowsHtml}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        // 自動平滑捲動到當天
+        setTimeout(() => {
+            const target = document.getElementById('date-' + todayStr);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 400);
+    }
+
+    // 彈出視窗顯示 A, B, C, G, J, M, N, O, P 欄位
+    function showCustomerModal(cust) {
+        document.getElementById('modalCustomerName').innerText = `${cust.C || '顧客'} - 預約明細`;
+        const body = document.getElementById('modalCustomerDetails');
+        body.innerHTML = `
+            <div class="detail-row"><div class="detail-col-label">客戶姓名 (C)</div><div class="detail-col-val">${cust.C || '-'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">客戶編號 (A)</div><div class="detail-col-val">${cust.A || '-'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">客戶電話 (B)</div><div class="detail-col-val">${cust.B || '-'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">預約狀況 (G)</div><div class="detail-col-val"><span style="color:#A85555;font-weight:600;">${cust.G || '-'}</span></div></div>
+            <div class="detail-row"><div class="detail-col-label">預約時間 (J)</div><div class="detail-col-val">${cust.J || '-'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">協助人員 (M)</div><div class="detail-row-val">${cust.M || '無'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">預約醫師 (N)</div><div class="detail-col-val">${cust.N || '無'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">預約療程 (O)</div><div class="detail-col-val">${cust.O || '無'}</div></div>
+            <div class="detail-row"><div class="detail-col-label">備  註 (P)</div><div class="detail-col-val">${cust.P || '無'}</div></div>
+        `;
+        document.getElementById('customerModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customerModal').style.display = 'none';
+    }
+
+    window.onclick = function(e) {
+        if (e.target === document.getElementById('customerModal')) closeModal();
+    };
+
+    // 套用與清除日期篩選
+    function applyDateFilter() {
+        const start = document.getElementById('filterStartDate').value;
+        const end = document.getElementById('filterEndDate').value;
+        updateDashboard(start, end);
+    }
+
+    function resetDateFilter() {
+        document.getElementById('filterStartDate').value = '';
+        document.getElementById('filterEndDate').value = '';
+        updateDashboard(null, null);
+    }
+
+    // 監聽 Excel 檔案上傳
+    document.getElementById('excelFileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
 
+        document.getElementById('fileStatusText').innerText = `已載入檔案：${file.name}`;
         const reader = new FileReader();
         reader.onload = function(evt) {
             const data = new Uint8Array(evt.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            allAppointments = parseRows(jsonRows);
 
-            currentData = processExcelData(jsonRows);
-            renderDashboard(currentData);
+            // 自動設定日期區間為資料起訖日
+            const dates = allAppointments.map(r => r.date).filter(Boolean).sort();
+            if (dates.length > 0) {
+                document.getElementById('filterStartDate').value = dates[0];
+                document.getElementById('filterEndDate').value = dates[dates.length - 1];
+            }
+            updateDashboard(dates[0], dates[dates.length - 1]);
         };
         reader.readAsArrayBuffer(file);
     });
 
-    // 初始載入：提示使用者選取檔案
+    // 頁面初次載入提示
     window.addEventListener('DOMContentLoaded', () => {
-        // 您亦可將預約明細 Excel 檔案直接由上方按鈕選取匯入
-        document.getElementById('overallSummary').innerHTML = '請點選左側按鈕上傳或更換 Excel 報表';
+        document.getElementById('fileStatusText').innerText = '請點選左側按鈕匯入預約明細 Excel 檔案';
+        document.getElementById('dailyListContainer').innerHTML = `
+            <div style="background:white; border-radius:12px; padding:45px 20px; text-align:center; color:#8C7B7B; border:1px solid #EADCDC;">
+                <p style="font-size:1.1rem; margin-bottom:10px;">尚未匯入 Excel 檔案</p>
+                <p style="font-size:0.88rem;">請點選上方「上傳 / 切換 Excel 檔案」載入報表即可呈現完整總覽分析！</p>
+            </div>
+        `;
     });
 </script>
 </body>
